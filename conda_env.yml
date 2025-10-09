@@ -12,7 +12,7 @@ dependencies:
     - tb-nightly
     - imageio
     - imageio-ffmpeg
-    - git+https://github.com/facebookresearch/hydra@0.11_branch
+    - git+https://github.com/facebookresearch/hydra.git@0.11_branch
     - matplotlib
     - scikit-image
     - tqdm

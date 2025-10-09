@@ -21,10 +21,13 @@ We use customized softgym envs (for cloth fold and straighten rope), as provided
 
 ## Run experiments
 - Get a Gemini api key: follow instructions at https://aistudio.google.com/app/apikey 
-- Set the environment variable `export GEMINI_API_KEY=your_obtained_key`.
+- We use GPT4v for the cloth fold task, get the OpenAI API key.
+- Make sure you're in the rlvlmf virtualenv and run 
+  - `conda env config vars set GEMINI_API_KEY="<ENTER API KEY>"` 
+  - `conda env config vars set OPENAI_API_KEY="<ENTER API KEY>"` 
+- Reactivate virtualenv: `conda deactivate && conda activate rlvlmf`
 - Run `source prepare.sh` to prepare some environment variables.    
 - Then please see `run.sh` for running experiments with different environments.    
-- We use GPT4v for the cloth fold task. Set the environment variable `export OPENAI_API_KEY=your_api_key`, and you should be good to go.   
 
 ## Cached VLM preference labels
 - Due to that Gemini-pro 1.0 has greatly decreased its free quota to be only 1500 request per day: https://ai.google.dev/pricing, we provide some of the VLM preference labels we cached when running the experiments. We only stored them at an interval during training, e.g., we stored every 25th time when we queried the VLM. Therefore, the total number of cached preferece labels are fewer than the number for the complete run. The labels are also not on-policy, which means they are not generated using the agent's online experience.  
