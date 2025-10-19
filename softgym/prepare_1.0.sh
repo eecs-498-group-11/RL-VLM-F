@@ -1,3 +1,7 @@
-export PYFLEXROOT=${PWD}/PyFlex
-export PYTHONPATH=${PYFLEXROOT}/bindings/build:$PYTHONPATH
-export LD_LIBRARY_PATH=${PYFLEXROOT}/external/SDL2-2.0.4/lib/x64:$LD_LIBRARY_PATH
+export WORKDIR=/workspace/RL-VLM-F
+export PYFLEXROOT=$WORKDIR/softgym/PyFlex
+export SOFTGYMROOT=$WORKDIR/softgym
+
+export PYTHONPATH=$PYFLEXROOT/bindings/build:$SOFTGYMROOT:$PYTHONPATH
+export LD_LIBRARY_PATH=$PYFLEXROOT/external/SDL2-2.0.4/lib/x64:$LD_LIBRARY_PATH
+export MUJOCO_GL=egl

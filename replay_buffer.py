@@ -20,7 +20,13 @@ class ReplayBuffer(object):
         self.window = window
         self.store_image = store_image
         if self.store_image:
-            self.images = np.empty((capacity, image_size, image_size, 3), dtype=np.uint8)
+            # self.images = np.empty((capacity, image_size, image_size, 3), dtype=np.uint8)
+            self.images = np.memmap(
+                'replay_buffer_images.dat',
+                dtype=np.uint8,
+                mode='w+',
+                shape=(capacity, image_size, image_size, 3)
+            )
 
         self.idx = 0
         self.last_save = 0

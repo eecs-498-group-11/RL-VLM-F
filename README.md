@@ -12,11 +12,15 @@ Install the conda env via
 ```
 conda env create -f conda_env.yml
 conda activate rlvlmf
-conda install -y pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch  
-pip install numpy==1.26.0
 ```
+PLEASE ONLY USE THE METAWORLD FOR RIGHT NOW. There is no need for docker right now.
+<!-- We use customized softgym envs (for cloth fold and straighten rope), as provided in `softgym` folder. Please refer to https://github.com/Xingyu-Lin/softgym?tab=readme-ov-file for compiling softgym.  -->
 
-We use customized softgym envs (for cloth fold and straighten rope), as provided in `softgym` folder. Please refer to https://github.com/Xingyu-Lin/softgym?tab=readme-ov-file for compiling softgym. 
+## Train a Metaworld scene
+First download the cached data below. Then, go to `run.sh` and select which metaworld env to run
+
+To run the metaworld env, we only need to run on the host (no docker needed). To do this make sure you have your conda rlvlmf env activated.
+You can run `. ./activate_conda.sh` after modifications to it (link your miniforge properly!). This will also source `prepare.sh` so that things are linked properly. Then run `. ./run.sh`
 
 
 ## Run experiments

@@ -13,6 +13,7 @@ COMMON_TRAIN_FORMAT = [
     ('step', 'S', 'int'),
     ('episode_reward', 'R', 'float'),
     ('true_episode_reward', 'TR', 'float'), 
+    ('true_episode_success', 'TS', 'float'),
     ('total_feedback', 'TF', 'int'),
     ('labeled_feedback', 'LR', 'int'),
     ('noisy_feedback', 'NR', 'int'),
