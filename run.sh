@@ -1,3 +1,20 @@
+#!/bin/bash 
+
+#SBATCH --account=eecs498f25s006_class
+
+#SBATCH --time=5:00
+#SBATCH --partition=gpu
+#SBATCH --gpus=1
+#SBATCH --mem=1g
+
+#SBATCH --job-name=rlvlmf_test_1
+#SBATCH --output=rlvlmf_test_1.out
+#SBATCH --mail-user=pajehan@umich.edu
+#SBATCH --mail-type=BEGIN,END
+
+module purge
+module load python/3.9
+
 # ### ClothFold
 # python train_PEBBLE.py \
 #     env=softgym_ClothFoldDiagonal \
