@@ -51,3 +51,5 @@ data/
 
 
 softgym/PyFlex/bindings/build
+
+*.out
