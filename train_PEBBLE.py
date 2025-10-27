@@ -82,7 +82,7 @@ class Workspace(object):
         self.replay_buffer = ReplayBuffer(
             self.env.observation_space.shape,
             self.env.action_space.shape,
-            int(cfg.replay_buffer_capacity) if not self.cfg.image_reward else 200000, # we cannot afford to store too many images in the replay buffer.
+            int(cfg.replay_buffer_capacity) if not self.cfg.image_reward else 50000, # we cannot afford to store too many images in the replay buffer.
             self.device,
             store_image=self.cfg.image_reward,
             image_size=image_height)
@@ -139,11 +139,11 @@ class Workspace(object):
         
         if self.cfg.reward_model_load_dir != "None":
             print("loading reward model at {}".format(self.cfg.reward_model_load_dir))
-            self.reward_model.load(self.cfg.reward_model_load_dir, 1000000) 
+            self.reward_model.load(self.cfg.reward_model_load_dir, 200000) 
                 
         if self.cfg.agent_model_load_dir != "None":
             print("loading agent model at {}".format(self.cfg.agent_model_load_dir))
-            self.agent.load(self.cfg.agent_model_load_dir, 1000000) 
+            self.agent.load(self.cfg.agent_model_load_dir, 200000) 
         
     def evaluate(self, save_additional=False):
         average_episode_reward = 0
@@ -213,7 +213,8 @@ class Workspace(object):
                 images = self.env.video_frames
                 
             save_gif_path = os.path.join(save_gif_dir, 'step{:07}_episode{:02}_{}.gif'.format(self.step, episode, round(true_episode_reward, 2)))
-            utils.save_numpy_as_gif(np.array(images), save_gif_path)
+            if episode == 0:
+                utils.save_numpy_as_gif(np.array(images), save_gif_path)
             if save_additional:
                 save_image_dir = os.path.join(self.logger._log_dir, 'eval_images')
                 if not os.path.exists(save_image_dir):
