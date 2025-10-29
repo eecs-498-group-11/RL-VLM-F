@@ -38,7 +38,6 @@ go.Scatter(
         fill='tonexty',
         fillcolor='rgba(255,0,0,0.2)',
         line=dict(color='red', width=0),
-        name='Standard Error'
     ),
 go.Scatter(
         x=score_df['step'],
@@ -53,7 +52,6 @@ go.Scatter(
         fill='tonexty',
         fillcolor='rgba(100,0,100,0.2)',
         line=dict(color='purple', width=0),
-        name='Standard Error'
     ),
 go.Scatter(
         x=gt_df['step'],
@@ -68,7 +66,6 @@ go.Scatter(
         fill='tonexty',
         fillcolor='rgba(0,255,0,0.2)',
         line=dict(color='green', width=0),
-        name='Standard Error'
     ),
 go.Scatter(
         x=clip_df['step'],
@@ -83,7 +80,6 @@ go.Scatter(
         fill='tonexty',
         fillcolor='rgba(0,0,255,0.2)',
         line=dict(color='blue', width=0),
-        name='Standard Error'
     )])
 
 # RLVLMF line
