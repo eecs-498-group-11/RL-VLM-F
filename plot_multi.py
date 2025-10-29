@@ -124,8 +124,16 @@ fig.add_trace(go.Scatter(
 
 fig.update_layout(
     title='Success Rate Over Time',
-    xaxis_title='Step',
-    yaxis_title='Success Rate',
+    xaxis=dict(
+        title='Step',
+        dtick=50000,
+        range=[0,300000]
+    ),
+    yaxis=dict(
+        title='Success Rate',
+        dtick=.1,
+        range=[0,1]
+    ),
     template='plotly_white'
 )
 
