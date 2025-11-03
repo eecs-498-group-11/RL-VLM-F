@@ -30,7 +30,7 @@ goal_env_prompts = {
 ### asking gemini to output a preference with 2 stage analysis ###############
 #########################################################################
 gemini_free_query_prompt1 =  """
-Consider the following two images:
+Consider the following three images:
 Image 1:
 """
 
@@ -38,11 +38,24 @@ gemini_free_query_prompt2 = """
 Image 2:
 """
 
+gemini_free_query_prompt3 = """
+Image 3:
+"""
+
 gemini_free_query_env_prompts = {}
 gemini_free_query_template = """
 1. What is shown in Image 1?
 2. What is shown in Image 2?
-3. The goal is {}. Is there any difference between Image 1 and Image 2 in terms of achieving the goal?
+3. What is shown in Image 3?
+4. The goal is {}. 
+
+Step 1: Compare Image 1 and Image 2 - is there any difference between Image 1 and Image 2 in terms of achieving the goal?
+
+Which image better achieves the goal?
+
+Step 2: Compare the winner from Step 1 and Image 3 - is there any difference between the winner from Step 1 and image 3 in terms of achieving this goal?
+
+Which image better achieves the goal?
 """
 
 for env_name, prompt in goal_env_prompts.items():
@@ -56,12 +69,20 @@ gemini_summary_template = """
 Based on the text below to the questions:
 1. What is shown in Image 1?
 2. What is shown in Image 2?
-3. The goal is {}. Is there any difference between Image 1 and Image 2 in terms of achieving the goal?
+3. What is shown in Image 3?
+4. The goal is {}. 
+
+Step 1: Is there any difference between Image 1 and Image 2 in terms of achieving the goal?
 {}
 
 Is the goal better achieved in Image 1 or Image 2?
-Reply a single line of 0 if the goal is better achieved in Image 1, or 1 if it is better achieved in Image 2.
-Reply -1 if the text is unsure or there is no difference.
+Step 2: Take the winner from Step 1 and compare it to Image 3 - Is there any difference between the previous winner and Image 3 in terms of achieving the goal?
+Is the goal better achieved in the previous winner or Image 3?
+
+
+Reply with two lines:
+First line: 0 if Image 1 wins Step 1, or 1 if Image 2 wins Step 1, or -1 if the text is unsure or there is no difference.
+Second line: 0 if the Step 1 winner wins over Image 3, or 1 if Image 3 wins, or -1 if the text is unsure or there is no difference.
 """ 
 
 for env_name, prompt in goal_env_prompts.items():
@@ -77,6 +98,7 @@ gemini_single_query_prompt_template = """
 3. The goal is {}. Is there any difference between Image 1 and Image 2 in terms of achieving the goal?
 
 Is the goal better achieved in Image 1 or Image 2?
+
 Reply a single line of 0 if the goal is better achieved in Image 1, or 1 if it is better achieved in Image 2.
 Reply -1 if the text is unsure or there is no difference.
 """
