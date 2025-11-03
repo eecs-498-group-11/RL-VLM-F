@@ -95,12 +95,15 @@ for env_name, prompt in goal_env_prompts.items():
 gemini_single_query_prompt_template = """
 1. What is shown in Image 1?
 2. What is shown in Image 2?
-3. The goal is {}. Is there any difference between Image 1 and Image 2 in terms of achieving the goal?
-
+3. What is shown in Image 3?
+Step 1: The goal is {}. Is there any difference between Image 1 and Image 2 in terms of achieving the goal?
 Is the goal better achieved in Image 1 or Image 2?
+Step 2: Take the winner from Step 1 and compare it to Image 3 - Is there any difference between the previous winner and Image 3 in terms of achieving the goal?
+Is the goal better achieved in the previous winner or Image 3?
 
-Reply a single line of 0 if the goal is better achieved in Image 1, or 1 if it is better achieved in Image 2.
-Reply -1 if the text is unsure or there is no difference.
+Reply with two lines:
+First line: 0 if Image 1 achieves the goal better than Image 2 in Step 1, or 1 if Image 2 wins Step 1, or -1 if there is no preference.
+Second line: 0 if the Step 1 winner achieves the goal better than Image 3, or 1 if Image 3 wins, or -1 if there is no preference.
 """
 
 gemini_single_query_env_prompts = {}

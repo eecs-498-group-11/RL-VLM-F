@@ -213,7 +213,7 @@ class Workspace(object):
                 images = self.env.video_frames
                 
             save_gif_path = os.path.join(save_gif_dir, 'step{:07}_episode{:02}_{}.gif'.format(self.step, episode, round(true_episode_reward, 2)))
-            if episode == 0:
+            if episode == 0 and self.step % 50000 == 0:
                 utils.save_numpy_as_gif(np.array(images), save_gif_path)
             if save_additional:
                 save_image_dir = os.path.join(self.logger._log_dir, 'eval_images')

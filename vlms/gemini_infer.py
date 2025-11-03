@@ -10,8 +10,8 @@ import numpy as np
 
 genai.configure(api_key=os.environ['GEMINI_API_KEY'])
 
-model = genai.GenerativeModel('gemini-pro-vision')
-text_model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('gemini-2.0-flash-lite')
+text_model = genai.GenerativeModel('gemini-2.0-flash-lite')
 
         
 def gemini_query_1(query_list, temperature=0):
@@ -62,7 +62,7 @@ def gemini_query_1(query_list, temperature=0):
     print("time elapsed: ", end - beg)
     if success:
         try:
-            return response.text.split("\n")[-1].strip().lstrip()
+            return [int(x.strip()) for x in response.text.strip().split("\n") if x.strip()][-2:]
         except:
             return -1
     else:
@@ -165,13 +165,13 @@ if __name__ == "__main__":
         image[~mask] = (0, 0, 0)
         return image
 
-    image_path = "data/images/metaworld_sweep-into-v2/image_30_combined.png"
-    image = Image.open(image_path)
-    image = np.array(image)[100:, :, :]
-    image = Image.fromarray(image)
+    # image_path = "data/images/metaworld_sweep-into-v2/image_30_combined.png"
+    # image = Image.open(image_path)
+    # image = np.array(image)[100:, :, :]
+    # image = Image.fromarray(image)
 
-    image_1_path = "data/images/metaworld_sweep-into-v2/image_6_1.png"
-    image_2_path = "data/images/metaworld_sweep-into-v2/image_6_2.png"
+    image_1_path = "data/gpt_query_image/metaworld_sweep-into-v2/2025-10-28-16-42-56/000000.png"
+    image_2_path = "data/gpt_query_image/metaworld_sweep-into-v2/2025-10-28-16-42-56/000039.png"
     image_1 = Image.open(image_1_path)
     image_2 = Image.open(image_2_path)
 
