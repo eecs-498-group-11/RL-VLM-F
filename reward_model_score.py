@@ -316,7 +316,7 @@ class RewardModelScore:
             self.inputs.append(obses[index])
             self.targets.append(rewards[index])
         
-    def get_rank_probability(self, x_1, x_2):
+    def get_rank_probability(self, x_1, x_2, x_3):
         # get probability x_1 > x_2
         probs = []
         for member in range(self.de):
