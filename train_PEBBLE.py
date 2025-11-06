@@ -82,7 +82,7 @@ class Workspace(object):
         self.replay_buffer = ReplayBuffer(
             self.env.observation_space.shape,
             self.env.action_space.shape,
-            int(cfg.replay_buffer_capacity) if not self.cfg.image_reward else 200000, # we cannot afford to store too many images in the replay buffer.
+            int(cfg.replay_buffer_capacity) if not self.cfg.image_reward else 50000, # 200000, but we cannot afford to store too many images in the replay buffer.
             self.device,
             store_image=self.cfg.image_reward,
             image_size=image_height)
@@ -212,8 +212,11 @@ class Workspace(object):
             if 'softgym' in self.cfg.env:
                 images = self.env.video_frames
                 
-            save_gif_path = os.path.join(save_gif_dir, 'step{:07}_episode{:02}_{}.gif'.format(self.step, episode, round(true_episode_reward, 2)))
-            utils.save_numpy_as_gif(np.array(images), save_gif_path)
+            # save_gif_path = os.path.join(save_gif_dir, 'step{:07}_episode{:02}_{}.gif'.format(self.step, episode, round(true_episode_reward, 2)))
+            if self.step % 50000 == 0:
+                save_gif_path = os.path.join(save_gif_dir, 'step{:07}_episode{:02}_{}.gif'.format(self.step, episode, round(true_episode_reward, 2)))
+                utils.save_numpy_as_gif(np.array(images), save_gif_path)
+
             if save_additional:
                 save_image_dir = os.path.join(self.logger._log_dir, 'eval_images')
                 if not os.path.exists(save_image_dir):
