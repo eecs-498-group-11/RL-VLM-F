@@ -149,10 +149,12 @@ class RewardModelScore:
         if not self.image_reward:
             self.buffer_seg1 = np.empty((self.capacity, size_segment, self.ds+self.da), dtype=np.float32)
             self.buffer_seg2 = np.empty((self.capacity, size_segment, self.ds+self.da), dtype=np.float32)
+            self.buffer_seg3 = np.empty((self.capacity, size_segment, self.ds+self.da), dtype=np.float32)
         else:
             assert self.size_segment == 1
             self.buffer_seg1 = np.empty((self.capacity, 1, image_height, image_width, 3), dtype=np.uint8)
             self.buffer_seg2 = np.empty((self.capacity, 1, image_height, image_width, 3), dtype=np.uint8)
+            self.buffer_seg3 = np.empty((self.capacity, 1, image_height, image_width, 3), dtype=np.uint8)
             self.image_height = image_height
             self.image_width = image_width
             self.resize_factor = resize_factor
@@ -411,6 +413,7 @@ class RewardModelScore:
                 
             sa_t_1 = self.buffer_seg1[epoch*batch_size:last_index]
             sa_t_2 = self.buffer_seg2[epoch*batch_size:last_index]
+            sa_t_3 = self.buffer_seg3[epoch*batch_size:last_index]
             labels = self.buffer_label[epoch*batch_size:last_index]
             labels = torch.from_numpy(labels.flatten()).long().to(device)
             total += labels.size(0)
@@ -418,9 +421,11 @@ class RewardModelScore:
                 # get logits
                 r_hat1 = self.r_hat_member(sa_t_1, member=member)
                 r_hat2 = self.r_hat_member(sa_t_2, member=member)
+                r_hat3 = self.r_hat_member(sa_t_3, member=member)
                 r_hat1 = r_hat1.sum(axis=1)
                 r_hat2 = r_hat2.sum(axis=1)
-                r_hat = torch.cat([r_hat1, r_hat2], axis=-1)                
+                r_hat3 = r_hat3.sum(axis=1)
+                r_hat = torch.cat([r_hat1, r_hat2, r_hat3], axis=-1)                
                 _, predicted = torch.max(r_hat.data, 1)
                 correct = (predicted == labels).sum().item()
                 ensemble_acc[member] += correct
@@ -453,15 +458,23 @@ class RewardModelScore:
         r_t_1 = train_targets[batch_index_1] # Batch x T x 1
         if self.vlm_label:
             img_t_1 = train_images[batch_index_1] # Batch x T x *img_dim
+
+        batch_index_3 = np.random.choice(max_len, size=mb_size, replace=True)
+        sa_t_3 = train_inputs[batch_index_3] # Batch x T x dim of s&a
+        r_t_3 = train_targets[batch_index_3] # Batch x T x 1
+        if self.vlm_label:
+            img_t_3 = train_images[batch_index_3] # Batch x T x *img_dim
                 
         sa_t_1 = sa_t_1.reshape(-1, sa_t_1.shape[-1]) # (Batch x T) x dim of s&a
         r_t_1 = r_t_1.reshape(-1, r_t_1.shape[-1]) # (Batch x T) x 1
         sa_t_2 = sa_t_2.reshape(-1, sa_t_2.shape[-1]) # (Batch x T) x dim of s&a
         r_t_2 = r_t_2.reshape(-1, r_t_2.shape[-1]) # (Batch x T) x 1
+        sa_t_3 = sa_t_3.reshape(-1, sa_t_3.shape[-1]) # (Batch x T) x dim of s&a
+        r_t_3 = r_t_3.reshape(-1, r_t_3.shape[-1]) # (Batch x T) x 1
         if self.vlm_label:
             img_t_1 = img_t_1.reshape(-1, img_t_1.shape[2], img_t_1.shape[3], img_t_1.shape[4])
             img_t_2 = img_t_2.reshape(-1, img_t_2.shape[2], img_t_2.shape[3], img_t_2.shape[4])
-
+            img_t_3 = img_t_3.reshape(-1, img_t_3.shape[2], img_t_3.shape[3], img_t_3.shape[4])
         # Generate time index 
         time_index = np.array([list(range(i*len_traj, i*len_traj+self.size_segment)) for i in range(mb_size)])
         if 'Cloth' not in self.env_name:
@@ -469,39 +482,49 @@ class RewardModelScore:
             time_index_2 = time_index + random_idx_2
             random_idx_1 = np.random.choice(len_traj-self.size_segment, size=mb_size, replace=True).reshape(-1,1)
             time_index_1 = time_index + random_idx_1
+            random_idx_3 = np.random.choice(len_traj-self.size_segment, size=mb_size, replace=True).reshape(-1,1)
+            time_index_3 = time_index + random_idx_3
         else:
             time_index_2 = time_index
             time_index_1 = time_index
+            time_index_3 = time_index
         if self.vlm_label:
             image_time_index = np.array([[i*len_traj+self.size_segment - 1] for i in range(mb_size)])
             if 'Cloth' not in self.env_name:
                 image_time_index_2 = image_time_index + random_idx_2
                 image_time_index_1 = image_time_index + random_idx_1
+                image_time_index_3 = image_time_index + random_idx_3
             else:
                 image_time_index_2 = image_time_index
                 image_time_index_1 = image_time_index
+                image_time_index_3 = image_time_index
 
         sa_t_1 = np.take(sa_t_1, time_index_1, axis=0) # Batch x size_seg x dim of s&a
         r_t_1 = np.take(r_t_1, time_index_1, axis=0) # Batch x size_seg x 1
         sa_t_2 = np.take(sa_t_2, time_index_2, axis=0) # Batch x size_seg x dim of s&a
         r_t_2 = np.take(r_t_2, time_index_2, axis=0) # Batch x size_seg x 1
+        sa_t_3 = np.take(sa_t_3, time_index_2, axis=0) # Batch x size_seg x dim of s&a
+        r_t_3 = np.take(r_t_3, time_index_2, axis=0) # Batch x size_seg x 1
         if self.vlm_label:
             img_t_1 = np.take(img_t_1, image_time_index_1, axis=0) # Batch x vlm_label x *img_dim
             img_t_2 = np.take(img_t_2, image_time_index_2, axis=0) # Batch x vlm_label x *img_dim
-            
+            img_t_3 = np.take(img_t_3, image_time_index_3, axis=0) # Batch x vlm_label x *img_dim
+
             batch_size, horizon, image_height, image_width, _ = img_t_1.shape
 
             transposed_images = np.transpose(img_t_1, (0, 2, 1, 3, 4))
             img_t_1 = transposed_images.reshape(batch_size, image_height, horizon * image_width, 3) # batch x image_height x (time_horizon * image_width) x 3
             transposed_images = np.transpose(img_t_2, (0, 2, 1, 3, 4))
             img_t_2 = transposed_images.reshape(batch_size, image_height, horizon * image_width, 3) # batch x image_height x (time_horizon * image_width) x 3
-        
-        if not self.vlm_label:
-            return sa_t_1, sa_t_2, r_t_1, r_t_2
-        else:
-            return sa_t_1, sa_t_2, r_t_1, r_t_2, img_t_1, img_t_2
+            transposed_images = np.transpose(img_t_3, (0, 2, 1, 3, 4))
+            img_t_3 = transposed_images.reshape(batch_size, image_height, horizon * image_width, 3) # batch x image_height x (time_horizon * image_width) x 3
 
-    def put_queries(self, sa_t_1, sa_t_2, labels):
+        if not self.vlm_label:
+            return sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3
+        else:
+            return sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, img_t_1, img_t_2, img_t_3
+
+    def put_queries(self, sa_t_1, sa_t_2, sa_t_3, labels):
         total_sample = sa_t_1.shape[0]
         next_index = self.buffer_index + total_sample
         if next_index >= self.capacity:
@@ -509,12 +532,14 @@ class RewardModelScore:
             maximum_index = self.capacity - self.buffer_index
             np.copyto(self.buffer_seg1[self.buffer_index:self.capacity], sa_t_1[:maximum_index])
             np.copyto(self.buffer_seg2[self.buffer_index:self.capacity], sa_t_2[:maximum_index])
+            np.copyto(self.buffer_seg3[self.buffer_index:self.capacity], sa_t_3[:maximum_index])
             np.copyto(self.buffer_label[self.buffer_index:self.capacity], labels[:maximum_index])
 
             remain = total_sample - (maximum_index)
             if remain > 0:
                 np.copyto(self.buffer_seg1[0:remain], sa_t_1[maximum_index:])
                 np.copyto(self.buffer_seg2[0:remain], sa_t_2[maximum_index:])
+                np.copyto(self.buffer_seg3[0:remain], sa_t_3[maximum_index:])
                 np.copyto(self.buffer_label[0:remain], labels[maximum_index:])
 
             self.buffer_index = remain
@@ -522,8 +547,10 @@ class RewardModelScore:
             if self.image_reward:
                 sa_t_1 = sa_t_1.reshape(sa_t_1.shape[0], 1, sa_t_1.shape[1], sa_t_1.shape[2], sa_t_1.shape[3])
                 sa_t_2 = sa_t_2.reshape(sa_t_2.shape[0], 1, sa_t_2.shape[1], sa_t_2.shape[2], sa_t_2.shape[3])
+                sa_t_3 = sa_t_3.reshape(sa_t_3.shape[0], 1, sa_t_3.shape[1], sa_t_3.shape[2], sa_t_3.shape[3])
             np.copyto(self.buffer_seg1[self.buffer_index:next_index], sa_t_1)
             np.copyto(self.buffer_seg2[self.buffer_index:next_index], sa_t_2)
+            np.copyto(self.buffer_seg3[self.buffer_index:next_index], sa_t_3)
             np.copyto(self.buffer_label[self.buffer_index:next_index], labels)
             self.buffer_index = next_index
     
@@ -532,51 +559,58 @@ class RewardModelScore:
             return None, None, None, None, None, []
         with open(self.all_cached_labels[self.read_cache_idx], 'rb') as f:
             data = pkl.load(f)
-        combined_images_list, rational_labels, vlm_labels, sa_t_1, sa_t_2, r_t_1, r_t_2 = data
+        combined_images_list, rational_labels, vlm_labels, sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3 = data
         self.read_cache_idx += 1
-        return combined_images_list, sa_t_1, sa_t_2, r_t_1, r_t_2, rational_labels, vlm_labels
+        return combined_images_list, sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, rational_labels, vlm_labels
                 
     
-    def get_label(self, sa_t_1, sa_t_2, r_t_1, r_t_2, img_t_1=None, img_t_2=None):
+    def get_label(self, sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, img_t_1=None, img_t_2=None):
         sum_r_t_1 = np.sum(r_t_1, axis=1)
         sum_r_t_2 = np.sum(r_t_2, axis=1)
+        sum_r_t_3 = np.sum(r_t_2, axis=1)
         
         # skip the query
         if self.teacher_thres_skip > 0: 
-            max_r_t = np.maximum(sum_r_t_1, sum_r_t_2)
+            max_r_t = np.maximum(sum_r_t_1, sum_r_t_2, sum_r_t_3)
             max_index = (max_r_t > self.teacher_thres_skip).reshape(-1)
             if sum(max_index) == 0:
                 return None, None, None, None, []
 
             sa_t_1 = sa_t_1[max_index]
             sa_t_2 = sa_t_2[max_index]
+            sa_t_3 = sa_t_3[max_index]
             r_t_1 = r_t_1[max_index]
             r_t_2 = r_t_2[max_index]
+            r_t_3 = r_t_3[max_index]
             sum_r_t_1 = np.sum(r_t_1, axis=1)
             sum_r_t_2 = np.sum(r_t_2, axis=1)
+            sum_r_t_3 = np.sum(r_t_3, axis=1)
         
         # equally preferable
-        margin_index = (np.abs(sum_r_t_1 - sum_r_t_2) < self.teacher_thres_equal).reshape(-1)
+        margin_index = (np.abs(sum_r_t_1 - sum_r_t_2) < self.teacher_thres_equal 
+                        & np.abs(sum_r_t_2 - sum_r_t_3) < self.teacher_thres_equal
+                        & np.abs(sum_r_t_1 - sum_r_t_3) < self.teacher_thres_equal).reshape(-1)
         
         # perfectly rational
         seg_size = r_t_1.shape[1]
-        temp_r_t_1 = r_t_1.copy()
-        temp_r_t_2 = r_t_2.copy()
+        temp_r_t_1, temp_r_t_2, temp_r_t_3 = r_t_1.copy(), r_t_2.copy(), r_t_3.copy()
         for index in range(seg_size-1):
             temp_r_t_1[:,:index+1] *= self.teacher_gamma
             temp_r_t_2[:,:index+1] *= self.teacher_gamma
+            temp_r_t_3[:,:index+1] *= self.teacher_gamma
         sum_r_t_1 = np.sum(temp_r_t_1, axis=1)
         sum_r_t_2 = np.sum(temp_r_t_2, axis=1)
+        sum_r_t_3 = np.sum(temp_r_t_2, axis=1)
             
         rational_labels = 1*(sum_r_t_1 < sum_r_t_2)
+        reward_matrix = torch.tensor(np.stack([sum_r_t_1, sum_r_t_2, sum_r_t_3], axis=1), dtype=torch.float32)
         if self.teacher_beta > 0: # Bradley-Terry rational model
-            r_hat = torch.cat([torch.Tensor(sum_r_t_1), 
-                            torch.Tensor(sum_r_t_2)], axis=-1)
-            r_hat = r_hat*self.teacher_beta
-            ent = F.softmax(r_hat, dim=-1)[:, 1]
-            labels = torch.bernoulli(ent).int().numpy().reshape(-1, 1)
+            logits = self.teacher_beta * reward_matrix
+            probs = torch.nn.functional.softmax(logits, dim=-1)
+            choices = torch.multinomial(probs, num_samples=1).squeeze(-1)
+            labels = choices.numpy().reshape(-1, 1) # output 0, 1, 2
         else:
-            labels = rational_labels
+            labels = np.argmax(np.stack([sum_r_t_1, sum_r_t_2, sum_r_t_3], axis=1), axis=1).reshape(-1, 1)
         
         # making a mistake
         len_labels = labels.shape[0]
@@ -600,8 +634,8 @@ class RewardModelScore:
             save_path = "{}/data/gpt_query_image/{}/{}".format(dir_path, self.env_name, time_string)
             if not os.path.exists(save_path):
                 os.makedirs(save_path)
-            for idx, (img1, img2) in enumerate(zip(img_t_1, img_t_2)):
-                combined_image = np.concatenate([img1, img2], axis=1)
+            for idx, (img1, img2, img3) in enumerate(zip(img_t_1, img_t_2, img_t_3)):
+                combined_image = np.concatenate([img1, img2, img3], axis=1)
                 combined_images_list.append(combined_image)
                 combined_image = Image.fromarray(combined_image)
                 image_save_path = os.path.join(save_path, "{:06}.png".format(idx))
@@ -633,7 +667,7 @@ class RewardModelScore:
             elif self.vlm == 'gemini_score':
                 vlm_labels = []
                 from vlms.gemini_infer import gemini_query_2
-                for idx, (img1, img2) in enumerate(zip(img_t_1, img_t_2)):
+                for idx, (img1, img2, img3) in enumerate(zip(img_t_1, img_t_2, img_t_3)):
                     res = gemini_query_2(
                         [
                             gemini_score_prompt_start,
@@ -656,13 +690,16 @@ class RewardModelScore:
             
             sa_t_1 = sa_t_1[good_idx]
             sa_t_2 = sa_t_2[good_idx]
+            sa_t_3 = sa_t_3[good_idx]
             r_t_1 = r_t_1[good_idx]
             r_t_2 = r_t_2[good_idx]
+            r_t_3 = r_t_3[good_idx]
             rational_labels = rational_labels[good_idx]
             vlm_labels = vlm_labels[good_idx]
             combined_images_list = np.array(combined_images_list)[good_idx]
             img_t_1 = img_t_1[good_idx]
             img_t_2 = img_t_2[good_idx]
+            img_t_3 = img_t_3[good_idx]
             if self.flip_vlm_label: # score flipped
                 vlm_labels = - vlm_labels
 
@@ -671,50 +708,55 @@ class RewardModelScore:
                 if not os.path.exists(save_path):
                     os.makedirs(save_path)
                 with open("{}/{}.pkl".format(save_path, time_string), "wb") as f:
-                    pkl.dump([combined_images_list, rational_labels, vlm_labels, sa_t_1, sa_t_2, r_t_1, r_t_2], f, protocol=pkl.HIGHEST_PROTOCOL)
+                    pkl.dump([combined_images_list, rational_labels, vlm_labels, sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3], f, protocol=pkl.HIGHEST_PROTOCOL)
 
             if not self.image_reward:
-                return sa_t_1, sa_t_2, r_t_1, r_t_2, labels, vlm_labels
+                return sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, labels, vlm_labels
             else:
-                return sa_t_1, sa_t_2, r_t_1, r_t_2, img_t_1, img_t_2, labels, vlm_labels
+                return sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, img_t_1, img_t_2, img_t_3, labels, vlm_labels
 
         if not self.image_reward:
-            return sa_t_1, sa_t_2, r_t_1, r_t_2, labels
+            return sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, labels
         else:
-            return sa_t_1, sa_t_2, r_t_1, r_t_2, img_t_1, img_t_2, labels
+            return sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, img_t_1, img_t_2, img_t_3, labels
 
     
     def kcenter_sampling(self):
         
         # get queries
         num_init = self.mb_size*self.large_batch
-        sa_t_1, sa_t_2, r_t_1, r_t_2 =  self.get_queries(
+        sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3 =  self.get_queries(
             mb_size=num_init)
         
         # get final queries based on kmeans clustering
         temp_sa_t_1 = sa_t_1[:,:,:self.ds]
         temp_sa_t_2 = sa_t_2[:,:,:self.ds]
+        temp_sa_t_3 = sa_t_3[:,:,:self.ds]
         temp_sa = np.concatenate([temp_sa_t_1.reshape(num_init, -1),  
-                                  temp_sa_t_2.reshape(num_init, -1)], axis=1)
+                                  temp_sa_t_2.reshape(num_init, -1),
+                                  temp_sa_t_3.reshape(num_init, -1)], axis=1)
         
         max_len = self.capacity if self.buffer_full else self.buffer_index
         
         tot_sa_1 = self.buffer_seg1[:max_len, :, :self.ds]
         tot_sa_2 = self.buffer_seg2[:max_len, :, :self.ds]
+        tot_sa_3 = self.buffer_seg3[:max_len, :, :self.ds]
         tot_sa = np.concatenate([tot_sa_1.reshape(max_len, -1),  
-                                 tot_sa_2.reshape(max_len, -1)], axis=1)
+                                 tot_sa_2.reshape(max_len, -1),
+                                 tot_sa_3.reshape(max_len, -1)], axis=1)
         
         selected_index = KCenterGreedy(temp_sa, tot_sa, self.mb_size)
 
         r_t_1, sa_t_1 = r_t_1[selected_index], sa_t_1[selected_index]
         r_t_2, sa_t_2 = r_t_2[selected_index], sa_t_2[selected_index]
+        r_t_3, sa_t_3 = r_t_3[selected_index], sa_t_3[selected_index]
         
         # get labels
-        sa_t_1, sa_t_2, r_t_1, r_t_2, labels = self.get_label(
-            sa_t_1, sa_t_2, r_t_1, r_t_2)
+        sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, labels = self.get_label(
+            sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3)
         
         if len(labels) > 0:
-            self.put_queries(sa_t_1, sa_t_2, labels)
+            self.put_queries(sa_t_1, sa_t_2, sa_t_3, labels)
         
         return len(labels)
     
@@ -724,40 +766,46 @@ class RewardModelScore:
         num_init_half = int(num_init*0.5)
         
         # get queries
-        sa_t_1, sa_t_2, r_t_1, r_t_2 =  self.get_queries(
+        sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3 =  self.get_queries(
             mb_size=num_init)
         
         # get final queries based on uncertainty
-        _, disagree = self.get_rank_probability(sa_t_1, sa_t_2)
+        _, disagree = self.get_rank_probability(sa_t_1, sa_t_2, sa_t_3)
         top_k_index = (-disagree).argsort()[:num_init_half]
         r_t_1, sa_t_1 = r_t_1[top_k_index], sa_t_1[top_k_index]
         r_t_2, sa_t_2 = r_t_2[top_k_index], sa_t_2[top_k_index]
+        r_t_3, sa_t_3 = r_t_3[top_k_index], sa_t_3[top_k_index]
         
         # get final queries based on kmeans clustering
         temp_sa_t_1 = sa_t_1[:,:,:self.ds]
         temp_sa_t_2 = sa_t_2[:,:,:self.ds]
+        temp_sa_t_3 = sa_t_3[:,:,:self.ds]
         
         temp_sa = np.concatenate([temp_sa_t_1.reshape(num_init_half, -1),  
-                                  temp_sa_t_2.reshape(num_init_half, -1)], axis=1)
+                                  temp_sa_t_2.reshape(num_init_half, -1),
+                                  temp_sa_t_3.reshape(num_init_half, -1)], axis=1)
         
         max_len = self.capacity if self.buffer_full else self.buffer_index
         
         tot_sa_1 = self.buffer_seg1[:max_len, :, :self.ds]
         tot_sa_2 = self.buffer_seg2[:max_len, :, :self.ds]
+        tot_sa_3 = self.buffer_seg3[:max_len, :, :self.ds]
         tot_sa = np.concatenate([tot_sa_1.reshape(max_len, -1),  
-                                 tot_sa_2.reshape(max_len, -1)], axis=1)
+                                 tot_sa_2.reshape(max_len, -1),
+                                 tot_sa_3.reshape(max_len, -1)], axis=1)
         
         selected_index = KCenterGreedy(temp_sa, tot_sa, self.mb_size)
         
         r_t_1, sa_t_1 = r_t_1[selected_index], sa_t_1[selected_index]
         r_t_2, sa_t_2 = r_t_2[selected_index], sa_t_2[selected_index]
+        r_t_3, sa_t_3 = r_t_3[selected_index], sa_t_3[selected_index]
 
         # get labels
-        sa_t_1, sa_t_2, r_t_1, r_t_2, labels = self.get_label(
-            sa_t_1, sa_t_2, r_t_1, r_t_2)
+        sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, labels = self.get_label(
+            sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3)
         
         if len(labels) > 0:
-            self.put_queries(sa_t_1, sa_t_2, labels)
+            self.put_queries(sa_t_1, sa_t_2, sa_t_3, labels)
         
         return len(labels)
     
@@ -767,7 +815,7 @@ class RewardModelScore:
         num_init_half = int(num_init*0.5)
         
         # get queries
-        sa_t_1, sa_t_2, r_t_1, r_t_2 =  self.get_queries(
+        sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3 =  self.get_queries(
             mb_size=num_init)
         
         
@@ -776,66 +824,76 @@ class RewardModelScore:
         top_k_index = (-entropy).argsort()[:num_init_half]
         r_t_1, sa_t_1 = r_t_1[top_k_index], sa_t_1[top_k_index]
         r_t_2, sa_t_2 = r_t_2[top_k_index], sa_t_2[top_k_index]
+        r_t_3, sa_t_3 = r_t_3[top_k_index], sa_t_3[top_k_index]
         
         # get final queries based on kmeans clustering
         temp_sa_t_1 = sa_t_1[:,:,:self.ds]
         temp_sa_t_2 = sa_t_2[:,:,:self.ds]
+        temp_sa_t_3 = sa_t_3[:,:,:self.ds]
         
         temp_sa = np.concatenate([temp_sa_t_1.reshape(num_init_half, -1),  
+                                  temp_sa_t_2.reshape(num_init_half, -1),
                                   temp_sa_t_2.reshape(num_init_half, -1)], axis=1)
         
         max_len = self.capacity if self.buffer_full else self.buffer_index
         
         tot_sa_1 = self.buffer_seg1[:max_len, :, :self.ds]
         tot_sa_2 = self.buffer_seg2[:max_len, :, :self.ds]
+        tot_sa_3 = self.buffer_seg3[:max_len, :, :self.ds]
         tot_sa = np.concatenate([tot_sa_1.reshape(max_len, -1),  
-                                 tot_sa_2.reshape(max_len, -1)], axis=1)
+                                 tot_sa_2.reshape(max_len, -1),
+                                 tot_sa_3.reshape(max_len, -1)], axis=1)
         
         selected_index = KCenterGreedy(temp_sa, tot_sa, self.mb_size)
         
         r_t_1, sa_t_1 = r_t_1[selected_index], sa_t_1[selected_index]
         r_t_2, sa_t_2 = r_t_2[selected_index], sa_t_2[selected_index]
+        r_t_3, sa_t_3 = r_t_3[selected_index], sa_t_3[selected_index]
 
         # get labels
-        sa_t_1, sa_t_2, r_t_1, r_t_2, labels = self.get_label(
-            sa_t_1, sa_t_2, r_t_1, r_t_2)
+        sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, labels = self.get_label(
+            sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3)
         
         if len(labels) > 0:
-            self.put_queries(sa_t_1, sa_t_2, labels)
+            self.put_queries(sa_t_1, sa_t_2, sa_t_3,  labels)
         
         return len(labels)
     
     def uniform_sampling(self):
         if not self.vlm_label:
             # get queries
-            sa_t_1, sa_t_2, r_t_1, r_t_2 =  self.get_queries(
+            sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3 =  self.get_queries(
                 mb_size=self.mb_size)
             # get labels
-            sa_t_1, sa_t_2, r_t_1, r_t_2, labels = self.get_label(
-                sa_t_1, sa_t_2, r_t_1, r_t_2)
+            sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, labels = self.get_label(
+                sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3)
         else:
             if self.cached_label_path is None or (self.cached_label_path is not None and self.read_cache_idx >= len(self.all_cached_labels)):
-                sa_t_1, sa_t_2, r_t_1, r_t_2, img_t_1, img_t_2 =  self.get_queries(
+                sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, img_t_1, img_t_2, img_t_3 =  self.get_queries(
                     mb_size=self.mb_size)
                 if not self.image_reward:
-                    sa_t_1, sa_t_2, r_t_1, r_t_2, gt_labels, vlm_labels = self.get_label(
-                        sa_t_1, sa_t_2, r_t_1, r_t_2, img_t_1, img_t_2)
+                    sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, gt_labels, vlm_labels = self.get_label(
+                        sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, img_t_1, img_t_2, img_t_3)
                 else:
-                    sa_t_1, sa_t_2, r_t_1, r_t_2, img_t_1, img_t_2, gt_labels, vlm_labels = self.get_label(
-                        sa_t_1, sa_t_2, r_t_1, r_t_2, img_t_1, img_t_2)
+                    sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, img_t_1, img_t_2, img_t_3, gt_labels, vlm_labels = self.get_label(
+                        sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, img_t_1, img_t_2, img_t_3)
             else:
-                combined_images_list, sa_t_1, sa_t_2, r_t_1, r_t_2, gt_labels, vlm_labels = self.get_label_from_cached_states()
+                combined_images_list, sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, gt_labels, vlm_labels = self.get_label_from_cached_states()
                 if self.image_reward:
                     num, height, width, _ = combined_images_list.shape
                     img_t_1 = combined_images_list[:, :, :width//2, :]
                     img_t_2 = combined_images_list[:, :, width//2:, :]
+                    img_t_3 = combined_images_list[:, :, width//2:, :]
                     resized_img_t_1 = np.zeros((num, self.image_height, self.image_width, 3), dtype=np.uint8)
                     resized_img_t_2 = np.zeros((num, self.image_height, self.image_width, 3), dtype=np.uint8)
+                    resized_img_t_3 = np.zeros((num, self.image_height, self.image_width, 3), dtype=np.uint8)
                     for idx in range(len(img_t_1)):
                         resized_img_t_1[idx] = cv2.resize(img_t_1[idx], (self.image_height, self.image_width))
                         resized_img_t_2[idx] = cv2.resize(img_t_2[idx], (self.image_height, self.image_width))
+                        resized_img_t_3[idx] = cv2.resize(img_t_3[idx], (self.image_height, self.image_width))
                     img_t_1 = resized_img_t_1
                     img_t_2 = resized_img_t_2
+                    img_t_3 = resized_img_t_3
 
                 # NOTE: for gpt scores I previously stored, I did not scale them to [-1, 1]. Need to scale here.
                 vlm_labels = vlm_labels * 2 - 1
@@ -845,51 +903,55 @@ class RewardModelScore:
             
         if len(labels) > 0:
             if not self.image_reward:
-                self.put_queries(sa_t_1, sa_t_2, labels)
+                self.put_queries(sa_t_1, sa_t_2, sa_t_3, labels)
             else:
-                self.put_queries(img_t_1[:, ::self.resize_factor, ::self.resize_factor, :], img_t_2[:, ::self.resize_factor, ::self.resize_factor, :], labels)
+                self.put_queries(img_t_1[:, ::self.resize_factor, ::self.resize_factor, :], 
+                                 img_t_2[:, ::self.resize_factor, ::self.resize_factor, :],
+                                 img_t_3[:, ::self.resize_factor, ::self.resize_factor, :], labels)
         
         return len(labels)
     
     def disagreement_sampling(self):
         
         # get queries
-        sa_t_1, sa_t_2, r_t_1, r_t_2 =  self.get_queries(
+        sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3 =  self.get_queries(
             mb_size=self.mb_size*self.large_batch)
         
         # get final queries based on uncertainty
         _, disagree = self.get_rank_probability(sa_t_1, sa_t_2)
         top_k_index = (-disagree).argsort()[:self.mb_size]
         r_t_1, sa_t_1 = r_t_1[top_k_index], sa_t_1[top_k_index]
-        r_t_2, sa_t_2 = r_t_2[top_k_index], sa_t_2[top_k_index]        
+        r_t_2, sa_t_2 = r_t_2[top_k_index], sa_t_2[top_k_index]
+        r_t_3, sa_t_3 = r_t_3[top_k_index], sa_t_3[top_k_index]          
         
         # get labels
-        sa_t_1, sa_t_2, r_t_1, r_t_2, labels = self.get_label(
-            sa_t_1, sa_t_2, r_t_1, r_t_2)        
+        sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, labels = self.get_label(
+            sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3)        
         if len(labels) > 0:
-            self.put_queries(sa_t_1, sa_t_2, labels)
+            self.put_queries(sa_t_1, sa_t_2, sa_t_3, labels)
         
         return len(labels)
     
     def entropy_sampling(self):
         
         # get queries
-        sa_t_1, sa_t_2, r_t_1, r_t_2 =  self.get_queries(
+        sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3 =  self.get_queries(
             mb_size=self.mb_size*self.large_batch)
         
         # get final queries based on uncertainty
-        entropy, _ = self.get_entropy(sa_t_1, sa_t_2)
+        entropy, _ = self.get_entropy(sa_t_1, sa_t_2, sa_t_3)
         
         top_k_index = (-entropy).argsort()[:self.mb_size]
         r_t_1, sa_t_1 = r_t_1[top_k_index], sa_t_1[top_k_index]
         r_t_2, sa_t_2 = r_t_2[top_k_index], sa_t_2[top_k_index]
+        r_t_3, sa_t_3 = r_t_3[top_k_index], sa_t_3[top_k_index]
         
         # get labels
-        sa_t_1, sa_t_2, r_t_1, r_t_2, labels = self.get_label(    
-            sa_t_1, sa_t_2, r_t_1, r_t_2)
+        sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3, labels = self.get_label(    
+            sa_t_1, sa_t_2, sa_t_3, r_t_1, r_t_2, r_t_3)
         
         if len(labels) > 0:
-            self.put_queries(sa_t_1, sa_t_2, labels)
+            self.put_queries(sa_t_1, sa_t_2, sa_t_3, labels)
         
         return len(labels)
     
@@ -921,6 +983,7 @@ class RewardModelScore:
                 idxs = total_batch_index[member][epoch*self.train_batch_size:last_index]
                 sa_t_1 = self.buffer_seg1[idxs]
                 sa_t_2 = self.buffer_seg2[idxs]
+                sa_t_3 = self.buffer_seg2[idxs]
                 labels = self.buffer_label[idxs]
                 labels = torch.from_numpy(labels.flatten()).to(device)
                 
@@ -931,11 +994,14 @@ class RewardModelScore:
                     # sa_t_1 is batch_size x segment x image_height x image_width x 3
                     sa_t_1 = np.transpose(sa_t_1, (0, 1, 4, 2, 3)) # for torch we need to transpose channel first
                     sa_t_2 = np.transpose(sa_t_2, (0, 1, 4, 2, 3)) 
+                    sa_t_3 = np.transpose(sa_t_3, (0, 1, 4, 2, 3)) 
                     # also we stored uint8 images, we need to convert them to float32
                     sa_t_1 = sa_t_1.astype(np.float32) / 255.0
                     sa_t_2 = sa_t_2.astype(np.float32) / 255.0
+                    sa_t_3 = sa_t_3.astype(np.float32) / 255.0
                     sa_t_1 = sa_t_1.squeeze(1)
                     sa_t_2 = sa_t_2.squeeze(1)
+                    sa_t_3 = sa_t_3.squeeze(1)
                 
                 # get logits
                 r_hat = self.r_hat_member(sa_t_1, member=member) # predict the score
@@ -987,6 +1053,7 @@ class RewardModelScore:
                 idxs = total_batch_index[member][epoch*self.train_batch_size:last_index]
                 sa_t_1 = self.buffer_seg1[idxs]
                 sa_t_2 = self.buffer_seg2[idxs]
+                sa_t_3 = self.buffer_seg3[idxs]
                 labels = self.buffer_label[idxs]
                 labels = torch.from_numpy(labels.flatten()).long().to(device)
                 
@@ -996,9 +1063,11 @@ class RewardModelScore:
                 # get logits
                 r_hat1 = self.r_hat_member(sa_t_1, member=member)
                 r_hat2 = self.r_hat_member(sa_t_2, member=member)
+                r_hat3 = self.r_hat_member(sa_t_3, member=member)
                 r_hat1 = r_hat1.sum(axis=1)
                 r_hat2 = r_hat2.sum(axis=1)
-                r_hat = torch.cat([r_hat1, r_hat2], axis=-1)
+                r_hat3 = r_hat3.sum(axis=1)
+                r_hat = torch.cat([r_hat1, r_hat2, r_hat3], axis=-1)
 
                 # compute loss
                 uniform_index = labels == -1
