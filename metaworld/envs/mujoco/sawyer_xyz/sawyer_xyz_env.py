@@ -469,20 +469,32 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
             self._set_pos_site(*site)
 
         if self._did_see_sim_exception:
+            info = {
+                "success": False,
+                "near_object": 0.0,
+                "grasp_success": False,
+                "grasp_reward": 0.0,
+                "in_place_reward": 0.0,
+                "obj_to_target": 0.0,
+                "unscaled_reward": 0.0,
+            }
+            
+            # add gripper + object position and velocity
+            info["mocap_pos"] = np.copy(self.data.mocap_pos[0]) # position
+            info["mocap_quat"] = np.copy(self.data.mocap_quat[0]) # orientation
+            info["mocap_vel"] = np.copy(self.data.mocap_velp[0]) # velocity
+            
+            if "object" in [b for b in self.model.body_names]:
+                obj_id = self.model.body_name2id("object")
+                info["obj_pos"] = np.copy(self.data.body_xpos[obj_id])
+                info["obj_vel"] = np.copy(self.data.body_xvelp[obj_id])
+                
             return (
                 self._last_stable_obs,  # observation just before going unstable
                 0.0,  # reward (penalize for causing instability)
                 False,
                 False,  # termination flag always False
-                {  # info
-                    "success": False,
-                    "near_object": 0.0,
-                    "grasp_success": False,
-                    "grasp_reward": 0.0,
-                    "in_place_reward": 0.0,
-                    "obj_to_target": 0.0,
-                    "unscaled_reward": 0.0,
-                },
+                info,
             )
 
         self._last_stable_obs = self._get_obs()
@@ -494,6 +506,17 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
             dtype=np.float64,
         )
         reward, info = self.evaluate_state(self._last_stable_obs, action)
+        
+        # Add mocap and object data before returning
+        info["mocap_pos"] = np.copy(self.data.mocap_pos[0])
+        info["mocap_quat"] = np.copy(self.data.mocap_quat[0])
+        info["mocap_vel"] = np.copy(self.data.mocap_velp[0])
+
+        if "object" in [b for b in self.model.body_names]:
+            obj_id = self.model.body_name2id("object")
+            info["obj_pos"] = np.copy(self.data.body_xpos[obj_id])
+            info["obj_vel"] = np.copy(self.data.body_xvelp[obj_id])
+            
         # step will never return a terminate==True if there is a success
         # but we can return truncate=True if the current path length == max path length
         truncate = False
