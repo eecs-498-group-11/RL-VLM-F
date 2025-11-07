@@ -245,9 +245,10 @@ class RewardModel:
         
         file_path = os.path.abspath(__file__)
         dir_path = os.path.dirname(file_path)
-        self.cached_label_path = "{}/{}".format(dir_path, cached_label_path)
         self.read_cache_idx = 0
-        if self.cached_label_path is not None:
+        self.cached_label_path = None
+        if cached_label_path is not None:
+            self.cached_label_path = "{}/{}".format(dir_path, cached_label_path)
             all_cached_labels = sorted(os.listdir(self.cached_label_path))
             self.all_cached_labels = [os.path.join(self.cached_label_path, x) for x in all_cached_labels]
         
@@ -638,14 +639,23 @@ class RewardModel:
         sum_r_t_2 = np.sum(temp_r_t_2, axis=1)
         sum_r_t_3 = np.sum(temp_r_t_3, axis=1)
             
-        reward_matrix = torch.tensor(np.stack([sum_r_t_1, sum_r_t_2, sum_r_t_3], axis=1), dtype=torch.float32)
+        rational_labels = np.argmax(
+            np.stack([sum_r_t_1, sum_r_t_2, sum_r_t_3], axis=1), axis=1
+        ).reshape(-1, 1)
         if self.teacher_beta > 0:
-            logits = self.teacher_beta * reward_matrix
-            probs = torch.nn.functional.softmax(logits, dim=-1)
-            choices = torch.multinomial(probs, num_samples=1).squeeze(-1)
-            labels = choices.numpy().reshape(-1, 1) # output 0, 1, 2
+            r_hat = torch.cat(
+                [
+                    torch.Tensor(sum_r_t_1).unsqueeze(1),
+                    torch.Tensor(sum_r_t_2).unsqueeze(1),
+                    torch.Tensor(sum_r_t_3).unsqueeze(1),
+                ],
+                axis=1,
+            )
+            r_hat = r_hat * self.teacher_beta
+            ent = F.softmax(r_hat, dim=-1)
+            labels = torch.multinomial(ent, num_samples=1).int().numpy().reshape(-1, 1)
         else:
-            labels = np.argmax(np.stack([sum_r_t_1, sum_r_t_2, sum_r_t_3], axis=1), axis=1).reshape(-1, 1)
+            labels = rational_labels
         
         # making a mistake
         len_labels = labels.shape[0]
@@ -717,7 +727,6 @@ class RewardModel:
                         Image.fromarray(img3), 
                         gemini_single_query_env_prompts[self.env_name],
                     ])
-                    exit(1) # TODO: fix label output
                     vlm_labels.append(res)
             elif self.vlm == "gemini_free_form":
                 vlm_labels = []
@@ -734,7 +743,6 @@ class RewardModel:
                     ],
                                 gemini_summary_env_prompts[self.env_name]
                     )
-                    exit(1) # TODO: fix label output
                     vlm_labels.append(res)   
 
             vlm_labels = np.array(vlm_labels).reshape(-1, 1)

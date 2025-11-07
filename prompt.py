@@ -79,10 +79,7 @@ Is the goal better achieved in Image 1 or Image 2?
 Step 2: Take the winner from Step 1 and compare it to Image 3 - Is there any difference between the previous winner and Image 3 in terms of achieving the goal?
 Is the goal better achieved in the previous winner or Image 3?
 
-
-Reply with two lines:
-First line: 0 if Image 1 wins Step 1, or 1 if Image 2 wins Step 1, or -1 if the text is unsure or there is no difference.
-Second line: 0 if the Step 1 winner wins over Image 3, or 1 if Image 3 wins, or -1 if the text is unsure or there is no difference.
+Reply with a single line of the image that won overall (0 for Image 1, 1 forImage 2, 2 for Image 3, or -1 if there's no preference overall).
 """ 
 
 for env_name, prompt in goal_env_prompts.items():
@@ -101,9 +98,7 @@ Is the goal better achieved in Image 1 or Image 2?
 Step 2: Take the winner from Step 1 and compare it to Image 3 - Is there any difference between the previous winner and Image 3 in terms of achieving the goal?
 Is the goal better achieved in the previous winner or Image 3?
 
-Reply with two lines:
-First line: 0 if Image 1 achieves the goal better than Image 2 in Step 1, or 1 if Image 2 wins Step 1, or -1 if there is no preference.
-Second line: 0 if the Step 1 winner achieves the goal better than Image 3, or 1 if Image 3 wins, or -1 if there is no preference.
+Reply with a single line of the image that won overall (0 for Image 1, 1 forImage 2, 2 for Image 3, or -1 if there's no preference overall).
 """
 
 gemini_single_query_env_prompts = {}

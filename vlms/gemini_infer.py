@@ -10,8 +10,8 @@ import numpy as np
 
 genai.configure(api_key=os.environ['GEMINI_API_KEY'])
 
-model = genai.GenerativeModel('gemini-2.0-flash-lite')
-text_model = genai.GenerativeModel('gemini-2.0-flash-lite')
+model = genai.GenerativeModel('gemini-2.5-flash-lite')
+text_model = genai.GenerativeModel('gemini-2.5-pro')
 
         
 def gemini_query_1(query_list, temperature=0):
@@ -62,7 +62,7 @@ def gemini_query_1(query_list, temperature=0):
     print("time elapsed: ", end - beg)
     if success:
         try:
-            return [int(x.strip()) for x in response.text.strip().split("\n") if x.strip()][-2:]
+            return int(response.text.strip().splitlines()[-1])
         except:
             return -1
     else:
@@ -143,7 +143,7 @@ def gemini_query_2(query_list, summary_prompt, temperature=0):
     print("time elapsed: ", end - beg)
     if success:
         try:
-            return summary_response.text.split("\n")[0].strip().lstrip()
+            return int(summary_response.text.strip().splitlines()[-1])
         except:
             return -1
     else:
