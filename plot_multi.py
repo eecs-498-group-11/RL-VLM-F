@@ -2,25 +2,29 @@ import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
 
+# folder called csvs with folder with this environment name, containing four csvs.
+env_name = "sweep"
+rolling = 100
+
 # requires four train.csv files with data based on RLVLMF, VLM Score, GT Preference, and CLIP Score
-rlvlmf_df = pd.read_csv("rlvlmf.csv")
-rlvlmf_df = rlvlmf_df[["episode_success", "step"]]
-rlvlmf_df["Success Rate"] = rlvlmf_df["episode_success"].rolling(window=100).mean()
+rlvlmf_df = pd.read_csv("csvs/" + env_name + "/rlvlmf.csv")
+rlvlmf_df = rlvlmf_df[rlvlmf_df["TimeLimit.truncated"] != 0][['episode_success', 'step']]
+rlvlmf_df["Success Rate"] = rlvlmf_df["episode_success"].rolling(window=rolling).mean()
 rlvlmf_se = np.sqrt(rlvlmf_df["Success Rate"] * (1 - rlvlmf_df["Success Rate"]) / 100)
 
-score_df = pd.read_csv("score.csv")
-score_df = score_df[["episode_success", "step"]]
-score_df["Success Rate"] = score_df["episode_success"].rolling(window=100).mean()
+score_df = pd.read_csv("csvs/" + env_name + "/score.csv")
+score_df = score_df[score_df["TimeLimit.truncated"] != 0][["episode_success", "step"]]
+score_df["Success Rate"] = score_df["episode_success"].rolling(window=rolling).mean()
 score_se = np.sqrt(score_df["Success Rate"] * (1 - score_df["Success Rate"]) / 100)
 
-gt_df = pd.read_csv("gt.csv")
-gt_df = gt_df[["episode_success", "step"]]
-gt_df["Success Rate"] = gt_df["episode_success"].rolling(window=100).mean()
+gt_df = pd.read_csv("csvs/" + env_name + "/gt.csv")
+gt_df = gt_df[gt_df["TimeLimit.truncated"] != 0][['episode_success', 'step']]
+gt_df["Success Rate"] = gt_df["episode_success"].rolling(window=rolling).mean()
 gt_se = np.sqrt(gt_df["Success Rate"] * (1 - gt_df["Success Rate"]) / 100)
 
-clip_df = pd.read_csv("clip.csv")
-clip_df = clip_df[["episode_success", "step"]]
-clip_df["Success Rate"] = clip_df["episode_success"].rolling(window=100).mean()
+clip_df = pd.read_csv("csvs/" + env_name + "/clip.csv")
+clip_df = clip_df[clip_df["TimeLimit.truncated"] != 0][['episode_success', 'step']]
+clip_df["Success Rate"] = clip_df["episode_success"].rolling(window=rolling).mean()
 clip_se = np.sqrt(clip_df["Success Rate"] * (1 - clip_df["Success Rate"]) / 100)
 
 # Create Plotly figure
@@ -119,11 +123,11 @@ fig.add_trace(go.Scatter(
 ))
 
 fig.update_layout(
-    title='Success Rate Over Time',
+    title='Success Rate Over Time: {}'.format(env_name),
     xaxis=dict(
         title='Step',
         dtick=50000,
-        range=[0,300000]
+        range=[50000,250000]
     ),
     yaxis=dict(
         title='Success Rate',
