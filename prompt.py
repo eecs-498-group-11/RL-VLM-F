@@ -71,15 +71,19 @@ Based on the text below to the questions:
 2. What is shown in Image 2?
 3. What is shown in Image 3?
 4. The goal is {}. 
+Step 1: Compare Image 1 and Image 2 - is there any difference between Image 1 and Image 2 in terms of achieving the goal?
 
-Step 1: Is there any difference between Image 1 and Image 2 in terms of achieving the goal?
+Which image better achieves the goal?
+
+Step 2: Compare the winner from Step 1 and Image 3 - is there any difference between the winner from Step 1 and image 3 in terms of achieving this goal?
+
+Which image better achieves the goal?
 {}
 
-Is the goal better achieved in Image 1 or Image 2?
-Step 2: Take the winner from Step 1 and compare it to Image 3 - Is there any difference between the previous winner and Image 3 in terms of achieving the goal?
-Is the goal better achieved in the previous winner or Image 3?
+Step 1: Is the goal better achieved in Image 1 or Image 2?
+Step 2: Take the winner from Step 1 and compare it to Image 3 - Is the goal better achieved in the previous winner or Image 3?
 
-Reply with a single line of the image that won overall (0 for Image 1, 1 forImage 2, 2 for Image 3, or -1 if there's no preference overall).
+Reply with a single line of the image that won overall (0 for Image 1, 1 for Image 2, 2 for Image 3, or -1 if there's no preference overall).
 """ 
 
 for env_name, prompt in goal_env_prompts.items():
@@ -98,7 +102,7 @@ Is the goal better achieved in Image 1 or Image 2?
 Step 2: Take the winner from Step 1 and compare it to Image 3 - Is there any difference between the previous winner and Image 3 in terms of achieving the goal?
 Is the goal better achieved in the previous winner or Image 3?
 
-Reply with a single line of the image that won overall (0 for Image 1, 1 forImage 2, 2 for Image 3, or -1 if there's no preference overall).
+Reply with a single line of the image that won overall (0 for Image 1, 1 for Image 2, 2 for Image 3, or -1 if there's no preference overall).
 """
 
 gemini_single_query_env_prompts = {}
