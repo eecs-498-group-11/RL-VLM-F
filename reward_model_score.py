@@ -254,8 +254,22 @@ class RewardModelScore:
             
         self.opt = torch.optim.Adam(self.paramlst, lr = self.lr)
             
-    def add_data(self, obs, act, rew, done, img=None):
-        sa_t = np.concatenate([obs, act], axis=-1)
+    def add_data(self, obs, act, rew, done, extra_info=None, img=None):
+        if extra_info is not None:
+            mocap_pos = extra_info.get("mocap_pos", [])
+            mocap_quat = extra_info.get("mocap_quat", [])
+            mocap_vel = extra_info.get("mocap_vel", [])
+            obj_pos = extra_info.get("obj_pos", [])
+            obj_vel = extra_info.get("obj_vel", [])
+
+            aug_obs = np.concatenate(
+                [obs, mocap_pos, mocap_quat, mocap_vel, obj_pos, obj_vel],
+                axis=-1
+            )
+        else:
+            aug_obs = obs
+
+        sa_t = np.concatenate([aug_obs, act], axis=-1)
         r_t = rew
         
         flat_input = sa_t.reshape(1, self.da+self.ds)
