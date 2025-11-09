@@ -15,10 +15,10 @@ clip_env_prompts = {
 
 # what RL-VLM-F uses
 goal_env_prompts = {
-    "metaworld_sweep-into-v2": "to minimize the distance between the green cube and the hole", # unsolved there is reward issue
-    "metaworld_drawer-open-v2": "to open the drawer", # let's try the flipped version.
+    "metaworld_sweep-into-v2": "to minimize the distance between the green cube and the hole with minimal arm movement", # unsolved there is reward issue
+    "metaworld_drawer-open-v2": "to open the drawer with minimal arm movement", # let's try the flipped version.
     "metaworld_door-open-v2": "to open the safe door", # let's try the flipped version.
-    "metaworld_soccer-v2": "to move the soccer ball into the goal", # not solved, there is reward issue
+    "metaworld_soccer-v2": "to move the soccer ball into the goal with minimal arm movement", # not solved, there is reward issue
     "CartPole-v1": "to balance the brown pole on the black cart to be upright",
     "softgym_RopeFlattenEasy": "to straighten the blue rope",
     "softgym_PassWater": "to move the container, which holds water, to be as close to the red circle as possible without causing too many water droplets to spill",
@@ -66,7 +66,10 @@ Reply -1 if the text is unsure or there is no difference.
 
 for env_name, prompt in goal_env_prompts.items():
     gemini_summary_env_prompts[env_name] = gemini_summary_template.format(prompt, "{}")
-    
+
+def gemini_movement_prompt(img_num, movement):
+    return """The total movement for the robotic arm in Image {} is {} units. """.format(img_num, movement)
+ 
 ######################################################################
 ### asking gemini to output a preference with 1 stage analysis ###############
 ######################################################################
