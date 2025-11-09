@@ -36,9 +36,15 @@ class SawyerMocapBase(mjenv_gym):
         )
         self.reset_mocap_welds()
         self.frame_skip = frame_skip
+        self._prev_mocap_pos = np.copy(self.data.mocap_pos[0])
 
     def get_endeff_pos(self):
         return self.data.body("hand").xpos
+    
+    def get_endeff_vel(self):
+        vel = (self.data.mocap_pos[0] - self._prev_mocap_pos) / self.frame_skip
+        self._prev_mocap_pos = self.data.mocap_pos[0].copy()
+        return vel
 
     @property
     def tcp_center(self):
@@ -403,11 +409,14 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         """
         # do frame stacking
         pos_goal = self._get_pos_goal()
+        # Hand velocity
+        hand_vel = self.get_endeff_vel()
+        print(hand_vel)
         if self._partially_observable:
             pos_goal = np.zeros_like(pos_goal)
         curr_obs = self._get_curr_obs_combined_no_goal()
         # do frame stacking
-        obs = np.hstack((curr_obs, self._prev_obs, pos_goal))
+        obs = np.hstack((curr_obs, self._prev_obs, pos_goal, hand_vel.flatten()))
         self._prev_obs = curr_obs
         return obs
 
@@ -428,6 +437,8 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         goal_high = np.zeros(3) if self._partially_observable else self.goal_space.high
         gripper_low = -1.0
         gripper_high = +1.0
+        hand_vel_low = np.array([-self.action_scale]*3)
+        hand_vel_high = np.array([self.action_scale]*3)
         return Box(
             np.hstack(
                 (
@@ -438,6 +449,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
                     gripper_low,
                     obj_low,
                     goal_low,
+                    hand_vel_low
                 )
             ),
             np.hstack(
@@ -449,6 +461,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
                     gripper_high,
                     obj_high,
                     goal_high,
+                    hand_vel_high
                 )
             ),
             dtype=np.float64,
@@ -480,14 +493,6 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
             }
             
             # add gripper + object position and velocity
-            info["mocap_pos"] = np.copy(self.data.mocap_pos[0]) # position
-            info["mocap_quat"] = np.copy(self.data.mocap_quat[0]) # orientation
-            info["mocap_vel"] = np.copy(self.data.mocap_velp[0]) # velocity
-            
-            if "object" in [b for b in self.model.body_names]:
-                obj_id = self.model.body_name2id("object")
-                info["obj_pos"] = np.copy(self.data.body_xpos[obj_id])
-                info["obj_vel"] = np.copy(self.data.body_xvelp[obj_id])
                 
             return (
                 self._last_stable_obs,  # observation just before going unstable
@@ -508,14 +513,6 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         reward, info = self.evaluate_state(self._last_stable_obs, action)
         
         # Add mocap and object data before returning
-        info["mocap_pos"] = np.copy(self.data.mocap_pos[0])
-        info["mocap_quat"] = np.copy(self.data.mocap_quat[0])
-        info["mocap_vel"] = np.copy(self.data.mocap_velp[0])
-
-        if "object" in [b for b in self.model.body_names]:
-            obj_id = self.model.body_name2id("object")
-            info["obj_pos"] = np.copy(self.data.body_xpos[obj_id])
-            info["obj_vel"] = np.copy(self.data.body_xvelp[obj_id])
             
         # step will never return a terminate==True if there is a success
         # but we can return truncate=True if the current path length == max path length
