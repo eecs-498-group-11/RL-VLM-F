@@ -2,6 +2,7 @@ import pathlib
 import textwrap
 import os
 from PIL import Image
+# changed to modern library, might need to change downloads
 import google.generativeai as genai
 import time
 from io import BytesIO
@@ -10,13 +11,14 @@ import numpy as np
 
 genai.configure(api_key=os.environ['GEMINI_API_KEY'])
 
-model = genai.GenerativeModel('gemini-pro-vision')
-text_model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('gemini-2.5-flash-lite')
+text_model = genai.GenerativeModel('gemini-2.5-pro')
 
         
 def gemini_query_1(query_list, temperature=0):
     beg = time.time()
-
+    
+    print("1 query")
     success = False
     try_cnt = 0
     while not success:
@@ -50,6 +52,7 @@ def gemini_query_1(query_list, temperature=0):
             )
 
             response.resolve()
+            #print(response.text)
             success = True    
         except:
             print("gemini retrying...")
@@ -70,7 +73,7 @@ def gemini_query_1(query_list, temperature=0):
 
 def gemini_query_2(query_list, summary_prompt, temperature=0):
     beg = time.time()
-
+    print("2 query")
     success = False
     try_cnt = 0
     while not success:
@@ -103,7 +106,7 @@ def gemini_query_2(query_list, summary_prompt, temperature=0):
             )
 
             response.resolve()
-    
+            print(query_list[2], response.text)
             summary_response = text_model.generate_content(
                     summary_prompt.format(response.text),
                     generation_config=genai.types.GenerationConfig(
@@ -129,6 +132,7 @@ def gemini_query_2(query_list, summary_prompt, temperature=0):
                     ]
             )
             summary_response.resolve()
+            print(summary_response.text)
             success = True    
         except:
             print("gemini retrying...")
@@ -152,7 +156,7 @@ def gemini_query_2(query_list, summary_prompt, temperature=0):
 if __name__ == "__main__":
     from prompt import (
         gemini_free_query_env_prompts, gemini_summary_env_prompts,
-        gemini_free_query_prompt1, gemini_free_query_prompt2,
+        gemini_free_query_prompt1, gemini_free_query_prompt2, gemini_movement_prompt
 
     ) 
     import numpy as np
@@ -165,13 +169,17 @@ if __name__ == "__main__":
         image[~mask] = (0, 0, 0)
         return image
 
-    image_path = "data/images/metaworld_sweep-into-v2/image_30_combined.png"
+    file_path = os.path.abspath(__file__)
+    dir_path = os.path.dirname(file_path)
+    image_path = "{}/../data/gpt_query_image/metaworld_sweep-into-v2/2025-10-29-00-38-34/000001.png".format(dir_path)
     image = Image.open(image_path)
     image = np.array(image)[100:, :, :]
     image = Image.fromarray(image)
 
-    image_1_path = "data/images/metaworld_sweep-into-v2/image_6_1.png"
-    image_2_path = "data/images/metaworld_sweep-into-v2/image_6_2.png"
+    file_path = os.path.abspath(__file__)
+    dir_path = os.path.dirname(file_path)
+    image_1_path = "{}/../data/gpt_query_image/metaworld_sweep-into-v2/2025-10-29-00-38-34/000000.png".format(dir_path)
+    image_2_path = "{}/../data/gpt_query_image/metaworld_sweep-into-v2/2025-10-29-00-38-34/000001.png".format(dir_path)
     image_1 = Image.open(image_1_path)
     image_2 = Image.open(image_2_path)
 
@@ -179,9 +187,11 @@ if __name__ == "__main__":
     gemini_query_2(
     [
         gemini_free_query_prompt1,
-        image_1, 
+        image_2, 
+        gemini_movement_prompt(1, 2),
         gemini_free_query_prompt2,
         image_2, 
+        gemini_movement_prompt(2,1),
         gemini_free_query_env_prompts[env_name]
     ],
         gemini_summary_env_prompts[env_name]
