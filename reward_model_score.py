@@ -254,7 +254,8 @@ class RewardModelScore:
             
         self.opt = torch.optim.Adam(self.paramlst, lr = self.lr)
             
-    def add_data(self, obs, act, rew, done, img=None):
+    def add_data(self, obs, act, rew, done, extra_info=None, img=None):
+
         sa_t = np.concatenate([obs, act], axis=-1)
         r_t = rew
         
