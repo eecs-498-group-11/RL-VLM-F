@@ -37,14 +37,29 @@ class SawyerMocapBase(mjenv_gym):
         self.reset_mocap_welds()
         self.frame_skip = frame_skip
         self._prev_mocap_pos = np.copy(self.data.mocap_pos[0])
+        self._interval = 10 # frames
+        self._frame_counter = 0
+        self._total_mocap_disp = np.zeros(3)
 
     def get_endeff_pos(self):
         return self.data.body("hand").xpos
     
-    def get_endeff_vel(self):
+    def get_endeff_vel(self): # arm_movement is cur_arm_pos - prev_arm_pos, aggregate this, set prev_pos = cur_pos, 
         vel = (self.data.mocap_pos[0] - self._prev_mocap_pos) / self.frame_skip
-        self._prev_mocap_pos = self.data.mocap_pos[0].copy()
+        self._prev_mocap_pos = self.data.mocap_pos[0].copy() # add for an episode.
         return vel
+    
+    def get_endeff_total_pos(self):
+        self._frame_counter += 1
+        # arm_movement is cur_arm_pos - prev_arm_pos, aggregate this, set prev_pos = cur_pos, 
+        # add for an episode.
+        cur_pos = self.data.mocap_pos[0].copy()
+        if self._frame_counter % self._interval == 0:
+            delta_pos = cur_pos - self._prev_mocap_pos
+            self._total_mocap_disp += delta_pos
+            self._prev_mocap_pos = cur_pos.copy()
+        
+        return self._total_mocap_disp.copy()
 
     @property
     def tcp_center(self):
@@ -409,14 +424,14 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         """
         # do frame stacking
         pos_goal = self._get_pos_goal()
-        # Hand velocity
-        hand_vel = self.get_endeff_vel()
-        print(hand_vel)
+        # Total Displacement
+        total_disp = self.get_endeff_total_pos()
+        print(total_disp)
         if self._partially_observable:
             pos_goal = np.zeros_like(pos_goal)
         curr_obs = self._get_curr_obs_combined_no_goal()
         # do frame stacking
-        obs = np.hstack((curr_obs, self._prev_obs, pos_goal, hand_vel.flatten()))
+        obs = np.hstack((curr_obs, self._prev_obs, pos_goal, total_disp.flatten()))
         self._prev_obs = curr_obs
         return obs
 
@@ -437,8 +452,8 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         goal_high = np.zeros(3) if self._partially_observable else self.goal_space.high
         gripper_low = -1.0
         gripper_high = +1.0
-        hand_vel_low = np.array([-self.action_scale]*3)
-        hand_vel_high = np.array([self.action_scale]*3)
+        total_disp_low = self._HAND_SPACE.low - self._HAND_SPACE.high  # conservative bound (negative)
+        total_disp_high = self._HAND_SPACE.high - self._HAND_SPACE.low  # positive counterpart
         return Box(
             np.hstack(
                 (
@@ -449,7 +464,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
                     gripper_low,
                     obj_low,
                     goal_low,
-                    hand_vel_low
+                    total_disp_low
                 )
             ),
             np.hstack(
@@ -461,7 +476,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
                     gripper_high,
                     obj_high,
                     goal_high,
-                    hand_vel_high
+                    total_disp_high
                 )
             ),
             dtype=np.float64,
@@ -543,8 +558,11 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
 
     def reset(self, seed=None, options=None):
         self.curr_path_length = 0
+        self._frame_counter = 0
         obs, info = super().reset()
         self._prev_obs = obs[:18].copy()
+        self._prev_mocap_pos = self.data.mocap_pos[0].copy() # Resetting previous position
+        self._total_mocap_disp = np.zeros(3) # This stores total movement vector since episode began
         obs[18:36] = self._prev_obs
         obs = np.float64(obs)
         return obs, info
