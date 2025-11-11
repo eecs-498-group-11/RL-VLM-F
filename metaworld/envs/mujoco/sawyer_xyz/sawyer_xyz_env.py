@@ -55,11 +55,11 @@ class SawyerMocapBase(mjenv_gym):
         # add for an episode.
         cur_pos = self.data.mocap_pos[0].copy()
         if self._frame_counter % self._interval == 0:
-            delta_pos = cur_pos - self._prev_mocap_pos
+            delta_pos = cur_pos - self._prev_mocap_pos # add the norm / magnitude
             self._total_mocap_disp += delta_pos
             self._prev_mocap_pos = cur_pos.copy()
         
-        return self._total_mocap_disp.copy()
+        return np.linalg.norm(self._total_mocap_disp)
 
     @property
     def tcp_center(self):
@@ -431,7 +431,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
             pos_goal = np.zeros_like(pos_goal)
         curr_obs = self._get_curr_obs_combined_no_goal()
         # do frame stacking
-        obs = np.hstack((curr_obs, self._prev_obs, pos_goal, total_disp.flatten()))
+        obs = np.hstack((curr_obs, self._prev_obs, pos_goal, np.atleast_1d(total_disp)))
         self._prev_obs = curr_obs
         return obs
 
@@ -452,8 +452,9 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         goal_high = np.zeros(3) if self._partially_observable else self.goal_space.high
         gripper_low = -1.0
         gripper_high = +1.0
-        total_disp_low = self._HAND_SPACE.low - self._HAND_SPACE.high  # conservative bound (negative)
-        total_disp_high = self._HAND_SPACE.high - self._HAND_SPACE.low  # positive counterpart
+        max_disp = np.linalg.norm(self._HAND_SPACE.high - self._HAND_SPACE.low)
+        total_disp_low = np.array([0.0])  # conservative bound (negative)
+        total_disp_high = np.array([max_disp])  # positive counterpart
         return Box(
             np.hstack(
                 (
