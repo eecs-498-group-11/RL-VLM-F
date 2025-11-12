@@ -426,7 +426,8 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         pos_goal = self._get_pos_goal()
         # Total Displacement
         total_disp = self.get_endeff_total_pos()
-        print(total_disp)
+        #if self._frame_counter % self._interval == 0:
+            #print(total_disp)
         if self._partially_observable:
             pos_goal = np.zeros_like(pos_goal)
         curr_obs = self._get_curr_obs_combined_no_goal()
@@ -452,9 +453,9 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         goal_high = np.zeros(3) if self._partially_observable else self.goal_space.high
         gripper_low = -1.0
         gripper_high = +1.0
-        max_disp = np.linalg.norm(self._HAND_SPACE.high - self._HAND_SPACE.low)
+        #max_disp = np.linalg.norm(self._HAND_SPACE.high - self._HAND_SPACE.low)
         total_disp_low = np.array([0.0])  # conservative bound (negative)
-        total_disp_high = np.array([max_disp])  # positive counterpart
+        total_disp_high = np.array([100])  # positive counterpart
         return Box(
             np.hstack(
                 (
