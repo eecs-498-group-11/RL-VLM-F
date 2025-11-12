@@ -35,11 +35,11 @@ replay_buffer_capacity: ${num_train_steps}
 
 # evaluation config
 eval_frequency: 10000
-num_eval_episodes: 10
+num_eval_episodes: 1
 device: cuda
 
 # logger
-log_frequency: 10000
+log_frequency: 1000
 log_save_tb: false
 save_interval: ${num_interact}
 
@@ -55,6 +55,7 @@ gradient_update: 1
 
 # vlm label
 vlm_label: 0
+metadata: 0
 vlm: bard
 flip_vlm_label: 0
 sum_segment_score: false
@@ -86,4 +87,4 @@ save_images: false
 hydra:
     name: ${env}
     run:
-        dir: ./exp/${exp_name}/${env}/${now:%Y-%m-%d}-${now:%H-%M-%S}/vlm_${vlm_label}${vlm}_reward${reward}_H${diag_gaussian_actor.params.hidden_dim}_L${diag_gaussian_actor.params.hidden_depth}_lr${agent.params.actor_lr}/teacher_b${teacher_beta}_g${teacher_gamma}_m${teacher_eps_mistake}_s${teacher_eps_skip}_e${teacher_eps_equal}/label_smooth_${label_margin}/schedule_${reward_schedule}/${experiment}_init${num_seed_steps}_unsup${num_unsup_steps}_inter${num_interact}_maxfeed${max_feedback}_seg${segment}_act${activation}_Rlr${reward_lr}_Rbatch${reward_batch}_Rupdate${reward_update}_en${ensemble_size}_sample${feed_type}_large_batch${large_batch}_seed${seed}
+        dir: ./exp/${exp_name}/${env}/${now:%Y-%m-%d}-${now:%H-%M-%S}/vlm_${vlm_label}${vlm}_metadata${metadata}_reward${reward}_H${diag_gaussian_actor.params.hidden_dim}_L${diag_gaussian_actor.params.hidden_depth}_lr${agent.params.actor_lr}/teacher_b${teacher_beta}_g${teacher_gamma}_m${teacher_eps_mistake}_s${teacher_eps_skip}_e${teacher_eps_equal}/label_smooth_${label_margin}/schedule_${reward_schedule}/${experiment}_init${num_seed_steps}_unsup${num_unsup_steps}_inter${num_interact}_maxfeed${max_feedback}_seg${segment}_act${activation}_Rlr${reward_lr}_Rbatch${reward_batch}_Rupdate${reward_update}_en${ensemble_size}_sample${feed_type}_large_batch${large_batch}_seed${seed}
