@@ -137,6 +137,7 @@ class RewardModel:
                  
                 # vlm related params
                 vlm_label=True,
+                metadata = True,
                 env_name="CartPole-v1",
                 vlm="gemini_free_form",
                 clip_prompt=None,
@@ -232,6 +233,7 @@ class RewardModel:
 
         # vlm label
         self.vlm_label = vlm_label
+        self.metadata = metadata
         self.env_name = env_name
         self.vlm = vlm
         self.clip_prompt = clip_prompt
@@ -681,15 +683,24 @@ class RewardModel:
             elif self.vlm == 'gemini_single_prompt':
                 vlm_labels = []
                 for idx, (img1, img2) in enumerate(zip(img_t_1, img_t_2)):
-                    res = gemini_query_1([
-                        gemini_free_query_prompt1,
-                        Image.fromarray(img1), 
-                        gemini_movement_prompt(1, round(sa_t_1[idx][0][-5])), # replace index with where movement should be
-                        gemini_free_query_prompt2,
-                        Image.fromarray(img2),
-                        gemini_movement_prompt(2, sa_t_2[idx][0][-5]),
-                        gemini_single_query_env_prompts[self.env_name],
-                    ])
+                    if self.metadata: 
+                        res = gemini_query_1([
+                            gemini_free_query_prompt1,
+                            Image.fromarray(img1), 
+                            gemini_movement_prompt(1, round(sa_t_1[idx][0][-5])),
+                            gemini_free_query_prompt2,
+                            Image.fromarray(img2),
+                            gemini_movement_prompt(2, sa_t_2[idx][0][-5]),
+                            gemini_single_query_env_prompts[self.env_name],
+                        ])
+                    else: 
+                        res = gemini_query_1([
+                            gemini_free_query_prompt1,
+                            Image.fromarray(img1), 
+                            gemini_free_query_prompt2,
+                            Image.fromarray(img2),
+                            gemini_single_query_env_prompts[self.env_name],
+                        ])
                     try:
                         if "-1" in res:
                             res = -1
@@ -706,19 +717,30 @@ class RewardModel:
                 vlm_labels = []
                 
                 for idx, (img1, img2) in enumerate(zip(img_t_1, img_t_2)):
-                    #print(sa_t_1[idx][0][-5])
-                    res = gemini_query_2(
-                            [
-                                gemini_free_query_prompt1,
-                                Image.fromarray(img1), 
-                                gemini_movement_prompt(1, round(sa_t_1[idx][0][-5])),
-                                gemini_free_query_prompt2,
-                                Image.fromarray(img2), 
-                                gemini_movement_prompt(2, round(sa_t_2[idx][0][-5], 4)),
-                                gemini_free_query_env_prompts[self.env_name]
-                    ],
-                                gemini_summary_env_prompts[self.env_name]
-                    )
+                    if self.metadata:
+                        res = gemini_query_2(
+                                [
+                                    gemini_free_query_prompt1,
+                                    Image.fromarray(img1), 
+                                    gemini_movement_prompt(1, round(sa_t_1[idx][0][-5])),
+                                    gemini_free_query_prompt2,
+                                    Image.fromarray(img2), 
+                                    gemini_movement_prompt(2, round(sa_t_2[idx][0][-5], 4)),
+                                    gemini_free_query_env_prompts[self.env_name]
+                        ],
+                                    gemini_summary_env_prompts[self.env_name]
+                        )
+                    else:
+                        res = gemini_query_2(
+                                [
+                                    gemini_free_query_prompt1,
+                                    Image.fromarray(img1), 
+                                    gemini_free_query_prompt2,
+                                    Image.fromarray(img2), 
+                                    gemini_free_query_env_prompts[self.env_name]
+                        ],
+                                    gemini_summary_env_prompts[self.env_name]
+                        )
                     try:
                         res = int(res)
                         if res not in [0, 1, -1]:

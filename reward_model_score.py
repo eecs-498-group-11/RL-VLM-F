@@ -18,7 +18,7 @@ from vlms.gpt4_infer import gpt4v_infer
 from PIL import Image
 import datetime
 import pickle as pkl
-from prompt import gemini_score_prompt_start, gemini_score_env_prompts, gemini_score_summary_env_prompts
+from prompt import gemini_score_prompt_start, gemini_score_env_prompts, gemini_score_summary_env_prompts, gemini_movement_prompt
 from prompt import gpt_score_query_env_prompts, gpt_score_summary_env_prompts
 from reward_model import gen_image_net, gen_image_net2
 
@@ -102,6 +102,7 @@ class RewardModelScore:
                  
                 # vlm related params
                 vlm_label=False,
+                metadata=False,
                 env_name="CartPole-v1",
                 vlm="gemini_score",
                 clip_prompt=None,
@@ -194,6 +195,7 @@ class RewardModelScore:
 
         # vlm label
         self.vlm_label = vlm_label
+        self.metadata = metadata
         self.env_name = env_name
         self.vlm = vlm
         self.clip_prompt = clip_prompt
@@ -202,16 +204,16 @@ class RewardModelScore:
         self.flip_vlm_label = flip_vlm_label
         self.train_times = 0
         self.save_query_interval = save_query_interval
-
-        # self.cached_label_path = cached_label_path # replace with code from reward_model.py
-        file_path = os.path.abspath(__file__)
-        dir_path = os.path.dirname(file_path)
-        self.cached_label_path = "{}/{}".format(dir_path, cached_label_path)
-
-        if self.cached_label_path is not None:
+        if cached_label_path is not None:
+            # next 3 lines taken from reward_model.py to get path to work
+            file_path = os.path.abspath(__file__)
+            dir_path = os.path.dirname(file_path)
+            self.cached_label_path = "{}/{}".format(dir_path, cached_label_path)
             all_cached_labels = sorted(os.listdir(self.cached_label_path))
             self.all_cached_labels = [os.path.join(self.cached_label_path, x) for x in all_cached_labels]
             self.read_cache_idx = 0
+        else:
+            self.cached_label_path = None
     
     def eval(self,):
         for i in range(self.de):
@@ -254,8 +256,7 @@ class RewardModelScore:
             
         self.opt = torch.optim.Adam(self.paramlst, lr = self.lr)
             
-    def add_data(self, obs, act, rew, done, extra_info=None, img=None):
-
+    def add_data(self, obs, act, rew, done, img=None):
         sa_t = np.concatenate([obs, act], axis=-1)
         r_t = rew
         
@@ -638,14 +639,25 @@ class RewardModelScore:
                 vlm_labels = []
                 from vlms.gemini_infer import gemini_query_2
                 for idx, (img1, img2) in enumerate(zip(img_t_1, img_t_2)):
-                    res = gemini_query_2(
-                        [
-                            gemini_score_prompt_start,
-                            Image.fromarray(img1), 
-                            gemini_score_env_prompts[self.env_name]
-                        ],
-                        gemini_score_summary_env_prompts[self.env_name]
-                    ) # [0, 1]
+                    if self.metadata:
+                        res = gemini_query_2(
+                            [
+                                gemini_score_prompt_start,
+                                Image.fromarray(img1), 
+                                gemini_movement_prompt(1, sa_t_1[idx][0][-5]),
+                                gemini_score_env_prompts[self.env_name]
+                            ],
+                            gemini_score_summary_env_prompts[self.env_name]
+                        ) # [0, 1]
+                    else:
+                        res = gemini_query_2(
+                            [
+                                gemini_score_prompt_start,
+                                Image.fromarray(img1), 
+                                gemini_score_env_prompts[self.env_name]
+                            ],
+                            gemini_score_summary_env_prompts[self.env_name]
+                        ) # [0, 1]
 
                     try:
                         scaled_reward = float(res) * 2 - 1 # [-1, 1]

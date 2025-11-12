@@ -119,6 +119,7 @@ class Workspace(object):
             
             ### vlm parameters
             vlm_label=cfg.vlm_label,
+            metadata = cfg.metadata,
             vlm=cfg.vlm,
             env_name=cfg.env,
             clip_prompt=clip_env_prompts[cfg.env],
@@ -223,7 +224,7 @@ class Workspace(object):
                 images = self.env.video_frames
                 
             
-            if self.step % 5000 == 0 or self.step == 5000:
+            if self.step % 50000 == 0 or self.step == 10000:
                 save_gif_path = os.path.join(save_gif_dir, 'step{:07}_episode{:02}_{}.gif'.format(self.step, episode, round(true_episode_reward, 2)))
                 utils.save_numpy_as_gif(np.array(images), save_gif_path)
             if save_additional:
