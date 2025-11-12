@@ -139,11 +139,11 @@ class Workspace(object):
         
         if self.cfg.reward_model_load_dir != "None":
             print("loading reward model at {}".format(self.cfg.reward_model_load_dir))
-            self.reward_model.load(self.cfg.reward_model_load_dir, 200000) 
+            self.reward_model.load(self.cfg.reward_model_load_dir, 272000) 
                 
         if self.cfg.agent_model_load_dir != "None":
             print("loading agent model at {}".format(self.cfg.agent_model_load_dir))
-            self.agent.load(self.cfg.agent_model_load_dir, 200000) 
+            self.agent.load(self.cfg.agent_model_load_dir, 272000) 
         
     def evaluate(self, save_additional=False):
         average_episode_reward = 0
@@ -161,7 +161,11 @@ class Workspace(object):
             obs = self.env.reset()
             if "metaworld" in self.cfg.env:
                 obs = obs[0]
-
+            
+            # added to get position and movement
+            #prev_arm_pos = obs[0:3]
+            #arm_movement = 0
+            
             self.agent.reset()
             done = False
             episode_reward = 0
@@ -181,7 +185,13 @@ class Workspace(object):
                     obs, reward, terminated, truncated, extra = self.env.step(action)
                     done = terminated or truncated
                 ep_info.append(extra)
-
+                
+                # get current position to calculate total movement
+                #arm_pos = obs[0:3]
+                #arm_movement += np.linalg.norm(arm_pos - prev_arm_pos)
+                #prev_arm_pos = arm_pos
+                #print(arm_movement)
+                
                 rewards.append(reward)
                 if "metaworld" in self.cfg.env:
                     rgb_image = self.env.render()
@@ -212,11 +222,10 @@ class Workspace(object):
             if 'softgym' in self.cfg.env:
                 images = self.env.video_frames
                 
-            # save_gif_path = os.path.join(save_gif_dir, 'step{:07}_episode{:02}_{}.gif'.format(self.step, episode, round(true_episode_reward, 2)))
-            if self.step % 50000 == 0:
+            
+            if self.step % 5000 == 0 or self.step == 5000:
                 save_gif_path = os.path.join(save_gif_dir, 'step{:07}_episode{:02}_{}.gif'.format(self.step, episode, round(true_episode_reward, 2)))
                 utils.save_numpy_as_gif(np.array(images), save_gif_path)
-
             if save_additional:
                 save_image_dir = os.path.join(self.logger._log_dir, 'eval_images')
                 if not os.path.exists(save_image_dir):
@@ -313,6 +322,7 @@ class Workspace(object):
         if self.log_success:
             episode_success = 0
         true_episode_reward = 0
+        total_movement = 0
         
         # store train returns of recent 10 episodes
         avg_train_true_return = deque([], maxlen=10) 
@@ -355,15 +365,23 @@ class Workspace(object):
                         self.step)
                     self.logger.log('train/true_episode_success', episode_success,
                         self.step)
-
+                
+                self.logger.log('train/total_movement', total_movement, self.step)
+                
                 obs = self.env.reset()
                 if "metaworld" in self.cfg.env:
                     obs = obs[0]
+                    
+                # added to get position and movement
+                #prev_arm_pos = obs[0:3]
+                #arm_movement = 0
+                
                 self.agent.reset()
                 done = False
                 episode_reward = 0
                 avg_train_true_return.append(true_episode_reward)
                 true_episode_reward = 0
+                total_movement = 0
                 if self.log_success:
                     episode_success = 0
                 episode_step = 0
@@ -466,7 +484,14 @@ class Workspace(object):
                 next_obs, reward, terminated, truncated, extra = self.env.step(action)
                 done = terminated or truncated
             ep_info.append(extra)
-
+            
+            # get current position to calculate total movement
+            #if self.step % 10 == 0:
+                #arm_pos = next_obs[0:3]
+                #arm_movement += np.linalg.norm(arm_pos - prev_arm_pos)
+                #prev_arm_pos = arm_pos
+                #print(arm_movement)
+        
             if self.cfg.vlm_label or self.reward in ['blip2_image_text_matching', 'clip_image_text_matching'] or (self.cfg.image_reward and self.reward not in ["gt_task_reward", "sparse_task_reward"]):
                 if "metaworld" in self.cfg.env:
                     rgb_image = self.env.render()
@@ -529,6 +554,7 @@ class Workspace(object):
 
             episode_reward += reward_hat
             true_episode_reward += reward
+            total_movement = obs[-1]
             
             if self.log_success:
                 episode_success = max(episode_success, extra['success'])

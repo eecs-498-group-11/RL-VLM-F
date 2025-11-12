@@ -18,6 +18,7 @@ from prompt import (
     gemini_free_query_prompt1, gemini_free_query_prompt2,
     gemini_single_query_env_prompts,
     gpt_free_query_env_prompts, gpt_summary_env_prompts,
+    gemini_movement_prompt,
 )
 from vlms.gemini_infer import gemini_query_2, gemini_query_1
 from conv_net import CNN, fanin_init
@@ -241,13 +242,17 @@ class RewardModel:
         self.save_query_interval = save_query_interval
         
         
-        file_path = os.path.abspath(__file__)
-        dir_path = os.path.dirname(file_path)
-        self.cached_label_path = "{}/{}".format(dir_path, cached_label_path)
-        self.read_cache_idx = 0
-        if self.cached_label_path is not None:
+    
+        if cached_label_path is not None:
+            file_path = os.path.abspath(__file__)
+            dir_path = os.path.dirname(file_path)
+            self.cached_label_path = "{}/{}".format(dir_path, cached_label_path)
+            self.read_cache_idx = 0
             all_cached_labels = sorted(os.listdir(self.cached_label_path))
             self.all_cached_labels = [os.path.join(self.cached_label_path, x) for x in all_cached_labels]
+        else:
+            self.all_cached_labels = []
+            self.cached_label_path = cached_label_path
         
     def eval(self,):
         for i in range(self.de):
@@ -290,9 +295,9 @@ class RewardModel:
             
         self.opt = torch.optim.Adam(self.paramlst, lr = self.lr)
             
-    def add_data(self, obs, act, rew, done, extra_info = None, img=None):
-
+    def add_data(self, obs, act, rew, done, img=None):
         sa_t = np.concatenate([obs, act], axis=-1)
+        #print(obs, act, sa_t, obs[-1])
         r_t = rew
         
         flat_input = sa_t.reshape(1, self.da+self.ds)
@@ -577,6 +582,9 @@ class RewardModel:
         sum_r_t_1 = np.sum(r_t_1, axis=1)
         sum_r_t_2 = np.sum(r_t_2, axis=1)
         
+        #for thing in sa_t_1:
+        #    print(thing)
+        #print(sa_t_1.shape)
         # skip the query
         if self.teacher_thres_skip > 0: 
             max_r_t = np.maximum(sum_r_t_1, sum_r_t_2)
@@ -676,8 +684,10 @@ class RewardModel:
                     res = gemini_query_1([
                         gemini_free_query_prompt1,
                         Image.fromarray(img1), 
+                        gemini_movement_prompt(1, round(sa_t_1[idx][0][-5])), # replace index with where movement should be
                         gemini_free_query_prompt2,
-                        Image.fromarray(img2), 
+                        Image.fromarray(img2),
+                        gemini_movement_prompt(2, sa_t_2[idx][0][-5]),
                         gemini_single_query_env_prompts[self.env_name],
                     ])
                     try:
@@ -694,13 +704,17 @@ class RewardModel:
                     vlm_labels.append(res)
             elif self.vlm == "gemini_free_form":
                 vlm_labels = []
+                
                 for idx, (img1, img2) in enumerate(zip(img_t_1, img_t_2)):
+                    #print(sa_t_1[idx][0][-5])
                     res = gemini_query_2(
                             [
                                 gemini_free_query_prompt1,
                                 Image.fromarray(img1), 
+                                gemini_movement_prompt(1, round(sa_t_1[idx][0][-5])),
                                 gemini_free_query_prompt2,
                                 Image.fromarray(img2), 
+                                gemini_movement_prompt(2, round(sa_t_2[idx][0][-5], 4)),
                                 gemini_free_query_env_prompts[self.env_name]
                     ],
                                 gemini_summary_env_prompts[self.env_name]

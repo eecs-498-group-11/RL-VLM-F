@@ -19,6 +19,7 @@ COMMON_TRAIN_FORMAT = [
     ('noisy_feedback', 'NR', 'int'),
     ('duration', 'D', 'time'),
     ('total_duration', 'TD', 'time'),
+    ('total_movement', 'TM', 'float')
 ]
 
 COMMON_EVAL_FORMAT = [
@@ -93,6 +94,7 @@ class MetersGroup(object):
                                               fieldnames=sorted(data.keys()),
                                               restval=0.0)
             self._csv_writer.writeheader()
+        #print(data.keys())
         self._csv_writer.writerow(data)
         self._csv_file.flush()
 
