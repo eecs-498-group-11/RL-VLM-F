@@ -4,35 +4,36 @@ import numpy as np
 
 # requires four train.csv files with data based on RLVLMF, VLM Score, GT Preference, and CLIP Score
 folder = "data/plotting_data/"
+num_rolling = 100
 rlvlmf_df = pd.read_csv(folder+"rlvlmf.csv")
 rlvlmf_df = rlvlmf_df[["episode_success", "step"]]
-rlvlmf_df["Success Rate"] = rlvlmf_df["episode_success"].rolling(window=100).mean()
-rlvlmf_se = np.sqrt(rlvlmf_df["Success Rate"] * (1 - rlvlmf_df["Success Rate"]) / 100)
+rlvlmf_df["Success Rate"] = rlvlmf_df["episode_success"].rolling(window=num_rolling).mean()
+rlvlmf_se = np.sqrt(rlvlmf_df["Success Rate"] * (1 - rlvlmf_df["Success Rate"]) / num_rolling)
 
 score_df = pd.read_csv(folder+"score.csv")
 score_df = score_df[["episode_success", "step"]]
-score_df["Success Rate"] = score_df["episode_success"].rolling(window=100).mean()
-score_se = np.sqrt(score_df["Success Rate"] * (1 - score_df["Success Rate"]) / 100)
+score_df["Success Rate"] = score_df["episode_success"].rolling(window=num_rolling).mean()
+score_se = np.sqrt(score_df["Success Rate"] * (1 - score_df["Success Rate"]) / num_rolling)
 
 gt_df = pd.read_csv(folder+"gt.csv")
 gt_df = gt_df[["episode_success", "step"]]
-gt_df["Success Rate"] = gt_df["episode_success"].rolling(window=100).mean()
-gt_se = np.sqrt(gt_df["Success Rate"] * (1 - gt_df["Success Rate"]) / 100)
+gt_df["Success Rate"] = gt_df["episode_success"].rolling(window=num_rolling).mean()
+gt_se = np.sqrt(gt_df["Success Rate"] * (1 - gt_df["Success Rate"]) / num_rolling)
 
 clip_df = pd.read_csv(folder+"clip.csv")
 clip_df = clip_df[["episode_success", "step"]]
-clip_df["Success Rate"] = clip_df["episode_success"].rolling(window=100).mean()
-clip_se = np.sqrt(clip_df["Success Rate"] * (1 - clip_df["Success Rate"]) / 100)
+clip_df["Success Rate"] = clip_df["episode_success"].rolling(window=num_rolling).mean()
+clip_se = np.sqrt(clip_df["Success Rate"] * (1 - clip_df["Success Rate"]) / num_rolling)
 
 a_df = pd.read_csv(folder+"extension_a.csv")
 a_df = a_df[["episode_success", "step"]]
-a_df["Success Rate"] = a_df["episode_success"].rolling(window=100).mean()
-a_se = np.sqrt(a_df["Success Rate"] * (1 - a_df["Success Rate"]) / 100)
+a_df["Success Rate"] = a_df["episode_success"].rolling(window=num_rolling).mean()
+a_se = np.sqrt(a_df["Success Rate"] * (1 - a_df["Success Rate"]) / num_rolling)
 
 single_df = pd.read_csv(folder+"single_prompt.csv")
 single_df = single_df[["episode_success", "step"]]
-single_df["Success Rate"] = single_df["episode_success"].rolling(window=100).mean()
-single_se = np.sqrt(single_df["Success Rate"] * (1 - single_df["Success Rate"]) / 100)
+single_df["Success Rate"] = single_df["episode_success"].rolling(window=num_rolling).mean()
+single_se = np.sqrt(single_df["Success Rate"] * (1 - single_df["Success Rate"]) / num_rolling)
 
 # Create Plotly figure
 fig = go.Figure([
