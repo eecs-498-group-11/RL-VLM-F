@@ -143,7 +143,7 @@ fig.add_trace(go.Scattergl(
     x=rlvlmf_df['step'],
     y=rlvlmf_df['total_movement'],
     mode='lines',
-    line=dict(color='red', width=2),
+    line=dict(color='orange', width=2),
     name='RLVLMF w/ metadata'
 ))
 
@@ -152,7 +152,7 @@ fig.add_trace(go.Scattergl(
     x=score_df['step'],
     y=score_df['total_movement'],
     mode='lines',
-    line=dict(color='purple', width=2),
+    line=dict(color='magenta', width=2),
     name='VLM Score w/ metadata'
 ))
 
@@ -178,7 +178,7 @@ fig.add_trace(go.Scattergl(
     x=rlvlmf_wo_df['step'],
     y=rlvlmf_wo_df['total_movement'],
     mode='lines',
-    line=dict(color='teal', width=2),
+    line=dict(color='red', width=2),
     name='RLVLMF w/o metadata'
 ))
 
@@ -186,7 +186,7 @@ fig.add_trace(go.Scattergl(
     x=score_wo_df['step'],
     y=score_wo_df['total_movement'],
     mode='lines',
-    line=dict(color='orange', width=2),
+    line=dict(color='purple', width=2),
     name='Score w/o metadata'
 ))
 
